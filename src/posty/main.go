@@ -14,11 +14,11 @@ import (
 
 var listen = flag.String("http", ":8080", "Listen on")
 
-func handle(ctx context.Context, handlerc xhandler.HandlerC) web.HandlerFunc {
-	return func(c web.C, w http.ResponseWriter, r *http.Request) {
+func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
+	return web.HandlerFunc(func(c web.C, w http.ResponseWriter, r *http.Request) {
 		newctx := context.WithValue(ctx, "urlparams", c.URLParams)
 		handlerc.ServeHTTPC(newctx, w, r)
-	}
+	})
 }
 
 // Obsolete pending pull request: https://github.com/rs/xhandler/pull/3
