@@ -21,14 +21,6 @@ func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
 	})
 }
 
-// Obsolete pending pull request: https://github.com/rs/xhandler/pull/3
-func handlerC(c xhandler.Chain, xh xhandler.HandlerC) xhandler.HandlerC {
-	for i := len(c) - 1; i >= 0; i-- {
-		xh = c[i](xh)
-	}
-	return xh
-}
-
 func main() {
 	flag.Parse()
 
@@ -38,7 +30,7 @@ func main() {
 	// Router
 	mux := web.New()
 	mainContext := context.Background()
-	mux.Get("/:name", handle(mainContext, handlerC(c, xhandler.HandlerFuncC(Index))))
+	mux.Get("/:name", handle(mainContext, c.HandlerC(xhandler.HandlerFuncC(Index))))
 	log.Infof("Listening on %s", *listen)
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
