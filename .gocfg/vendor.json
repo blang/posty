@@ -4,6 +4,26 @@
       "URI": "https://github.com/Sirupsen/logrus",
       "Ref": "fe6f2b03125e4fcafb21406381010e363a072c80"
     },
+    "vendor/src/github.com/coreos/go-oidc": {
+      "URI": "https://github.com/coreos/go-oidc",
+      "Ref": "5d3ac76573da4d1e3254d3748217bdf89154c667"
+    },
+    "vendor/src/github.com/coreos/go-systemd": {
+      "URI": "https://github.com/coreos/go-systemd",
+      "Ref": "b4a58d95188dd092ae20072bac14cece0e67c388"
+    },
+    "vendor/src/github.com/coreos/pkg": {
+      "URI": "https://github.com/coreos/pkg",
+      "Ref": "2c77715c4df99b5420ffcae14ead08f52104065d"
+    },
+    "vendor/src/github.com/godbus/dbus": {
+      "URI": "https://github.com/godbus/dbus",
+      "Ref": "c7fdd8b5cd55e87b4e1f4e372cdb1db61dd6c66f"
+    },
+    "vendor/src/github.com/jonboulle/clockwork": {
+      "URI": "https://github.com/jonboulle/clockwork",
+      "Ref": "fad208dd89dbc316a149043e332a192477f0e2a2"
+    },
     "vendor/src/github.com/rs/xhandler": {
       "URI": "https://github.com/rs/xhandler",
       "Ref": "b9e009e7d55fe16f8eb760b80ee8261e5ef90bda"
@@ -15,6 +35,10 @@
     "vendor/src/golang.org/x/net": {
       "URI": "https://go.googlesource.com/net",
       "Ref": "c764672d0ee39ffd83cfcb375804d3181302b62b"
+    },
+    "vendor/src/gopkg.in/yaml.v1": {
+      "URI": "https://gopkg.in/yaml.v1",
+      "Ref": "9f9df34309c04878acc86042b16630b0f696e1de"
     }
   },
   "MercurialRepos": {}
