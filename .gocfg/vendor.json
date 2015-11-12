@@ -1,0 +1,21 @@
+{
+  "GitRepos": {
+    "vendor/src/github.com/Sirupsen/logrus": {
+      "URI": "https://github.com/Sirupsen/logrus",
+      "Ref": "fe6f2b03125e4fcafb21406381010e363a072c80"
+    },
+    "vendor/src/github.com/rs/xhandler": {
+      "URI": "https://github.com/rs/xhandler",
+      "Ref": "8431b30f293907f6613667c03df1f089e0fb8741"
+    },
+    "vendor/src/github.com/zenazn/goji": {
+      "URI": "https://github.com/zenazn/goji",
+      "Ref": "be915f805dc15907f50100d9b9dc7ad29e197fb8"
+    },
+    "vendor/src/golang.org/x/net": {
+      "URI": "https://go.googlesource.com/net",
+      "Ref": "c764672d0ee39ffd83cfcb375804d3181302b62b"
+    }
+  },
+  "MercurialRepos": {}
+}
