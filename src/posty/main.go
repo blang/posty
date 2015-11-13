@@ -116,6 +116,7 @@ func main() {
 	mainContext := context.WithValue(context.Background(), "oidc", client)
 	mux.Get("/wall", handle(mainContext, authedChain.HandlerC(xhandler.HandlerFuncC(Index))))
 	mux.Get("/login", handle(mainContext, unauthedChain.HandlerC(xhandler.HandlerFuncC(Login))))
+	mux.Get("/logout", handle(mainContext, authedChain.HandlerC(xhandler.HandlerFuncC(Logout))))
 	mux.Get("/oauth2cb", handle(mainContext, unauthedChain.HandlerC(xhandler.HandlerFuncC(OAuth2Redirect))))
 	log.Infof("Listening on %s", *listen)
 	log.Fatal(http.ListenAndServe(":8080", gctx.ClearHandler(mux)))
@@ -193,6 +194,15 @@ func Login(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, u.String(), http.StatusFound)
+}
+
+func Logout(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	log.Info("Handler: Logout")
+	session := ctx.Value("session").(*sessions.Session)
+	delete(session.Values, "user")
+	session.Save(r, w)
+
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 func OAuth2Redirect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
