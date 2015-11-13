@@ -11,6 +11,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/oidc"
 	gctx "github.com/gorilla/context"
+	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/rs/xhandler"
 	"github.com/zenazn/goji/web"
@@ -22,7 +23,8 @@ var (
 	clientID         = flag.String("client-id", "", "OAuth client ID")
 	clientSecret     = flag.String("client-secret", "", "OAuth client secret")
 	oauthRedirectURL = flag.String("oauth-redirect-url", "http://127.0.0.1:8080/oauth2cb", "http://[host]/oauth2cb")
-	sessionSecret    = flag.String("session-secret", "something-very-secret", "Session secret")
+	sessionHashKey   = flag.String("session-hash-key", "", "Session hash key, 32/64 Byte")
+	sessionBlockKey  = flag.String("session-block-key", "", "Session block encryption key, valid lengths are 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256")
 )
 
 const (
@@ -47,9 +49,11 @@ func checkFlags() bool {
 		log.Fatal("Flag 'oauth-redirect-url' must be set")
 		return false
 	}
-	if *sessionSecret == "" {
-		log.Fatal("Flag 'session-secret' must be set")
-		return false
+	if *sessionHashKey == "" {
+		*sessionHashKey = string(securecookie.GenerateRandomKey(64))
+	}
+	if *sessionBlockKey == "" {
+		*sessionBlockKey = string(securecookie.GenerateRandomKey(32))
 	}
 	return true
 }
@@ -98,7 +102,7 @@ func main() {
 	baseChain.UseC(xhandler.TimeoutHandler(2 * time.Second))
 
 	// Session management
-	sessionStore := sessions.NewCookieStore([]byte(*sessionSecret))
+	sessionStore := sessions.NewCookieStore([]byte(*sessionHashKey), []byte(*sessionBlockKey))
 	baseChain.UseC(SessionHandler(sessionStore, "posty-session"))
 
 	// Chain for authenticated routes
