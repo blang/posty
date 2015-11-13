@@ -10,6 +10,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/coreos/go-oidc/oidc"
+	gctx "github.com/gorilla/context"
+	"github.com/gorilla/sessions"
 	"github.com/rs/xhandler"
 	"github.com/zenazn/goji/web"
 	"golang.org/x/net/context"
@@ -20,6 +22,7 @@ var (
 	clientID         = flag.String("client-id", "", "OAuth client ID")
 	clientSecret     = flag.String("client-secret", "", "OAuth client secret")
 	oauthRedirectURL = flag.String("oauth-redirect-url", "http://127.0.0.1:8080/oauth2cb", "http://[host]/oauth2cb")
+	sessionSecret    = flag.String("session-secret", "something-very-secret", "Session secret")
 )
 
 const (
@@ -44,6 +47,10 @@ func checkFlags() bool {
 		log.Fatal("Flag 'oauth-redirect-url' must be set")
 		return false
 	}
+	if *sessionSecret == "" {
+		log.Fatal("Flag 'session-secret' must be set")
+		return false
+	}
 	return true
 }
 
@@ -51,7 +58,6 @@ func main() {
 	if !checkFlags() {
 		os.Exit(1)
 	}
-
 	// OpenID
 	cc := oidc.ClientCredentials{
 		ID:     *clientID,
@@ -68,12 +74,11 @@ func main() {
 			break
 		}
 
-		sleep := 3 * time.Second
-		log.Printf("failed fetching provider config, trying again in %v: %v", sleep, err)
-		time.Sleep(sleep)
+		log.Printf("failed fetching provider config, trying again: %v", err)
+		time.Sleep(3 * time.Second)
 	}
 
-	log.Printf("fetched provider config from %s: %#v", oauthDiscovery, cfg)
+	log.Printf("fetched provider config from %s", oauthDiscovery)
 
 	ccfg := oidc.ClientConfig{
 		ProviderConfig: cfg,
@@ -89,18 +94,83 @@ func main() {
 	client.SyncProviderConfig(oauthDiscovery)
 
 	// Middleware
-	c := xhandler.Chain{}
-	c.UseC(xhandler.TimeoutHandler(2 * time.Second))
+	baseChain := xhandler.Chain{}
+	baseChain.UseC(xhandler.TimeoutHandler(2 * time.Second))
+
+	// Session management
+	sessionStore := sessions.NewCookieStore([]byte(*sessionSecret))
+	baseChain.UseC(SessionHandler(sessionStore, "posty-session"))
+
+	// Chain for authenticated routes
+	authedChain := xhandler.Chain{}
+	authedChain = append(authedChain, baseChain...)
+	authedChain.UseC(AuthenticatedFilter("/login"))
+
+	// Chain for unauthenticated routes
+	unauthedChain := xhandler.Chain{}
+	unauthedChain = append(unauthedChain, baseChain...)
+	unauthedChain.UseC(UnauthenticatedFilter("/wall"))
+
 	// Router
 	mux := web.New()
 	mainContext := context.WithValue(context.Background(), "oidc", client)
-	mux.Get("/test/:name", handle(mainContext, c.HandlerC(xhandler.HandlerFuncC(Index))))
-	mux.Get("/login", handle(mainContext, c.HandlerC(xhandler.HandlerFuncC(Login))))
-	mux.Get("/oauth2cb", handle(mainContext, c.HandlerC(xhandler.HandlerFuncC(OAuth2Redirect))))
+	mux.Get("/wall", handle(mainContext, authedChain.HandlerC(xhandler.HandlerFuncC(Index))))
+	mux.Get("/login", handle(mainContext, unauthedChain.HandlerC(xhandler.HandlerFuncC(Login))))
+	mux.Get("/oauth2cb", handle(mainContext, unauthedChain.HandlerC(xhandler.HandlerFuncC(OAuth2Redirect))))
 	log.Infof("Listening on %s", *listen)
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", gctx.ClearHandler(mux)))
 }
 
+func SessionHandler(store *sessions.CookieStore, name string) func(next xhandler.HandlerC) xhandler.HandlerC {
+	return func(next xhandler.HandlerC) xhandler.HandlerC {
+		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+			session, err := store.Get(r, name)
+			if err != nil {
+				log.Infof("Could not decode session %q from %q: %s", name, r.RemoteAddr, err)
+			}
+			ctx = context.WithValue(ctx, "session", session)
+			next.ServeHTTPC(ctx, w, r)
+		})
+	}
+}
+
+func AuthenticatedFilter(loginUrl string) func(next xhandler.HandlerC) xhandler.HandlerC {
+	return func(next xhandler.HandlerC) xhandler.HandlerC {
+		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+			session, ok := ctx.Value("session").(*sessions.Session)
+			if !ok {
+				log.Error("Context without valid session")
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+				return
+			}
+			if _, ok := session.Values["user"]; !ok {
+				log.Info("Handler: Is not loggedin")
+				http.Redirect(w, r, loginUrl, http.StatusFound)
+				return
+			}
+			next.ServeHTTPC(ctx, w, r)
+		})
+	}
+}
+
+func UnauthenticatedFilter(loggedInUrl string) func(next xhandler.HandlerC) xhandler.HandlerC {
+	return func(next xhandler.HandlerC) xhandler.HandlerC {
+		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+			session, ok := ctx.Value("session").(*sessions.Session)
+			if !ok {
+				log.Error("Context without valid session")
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+				return
+			}
+			if _, ok := session.Values["user"]; ok {
+				log.Info("Handler: Is loggedin")
+				http.Redirect(w, r, loggedInUrl, http.StatusFound)
+				return
+			}
+			next.ServeHTTPC(ctx, w, r)
+		})
+	}
+}
 func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
 	return web.HandlerFunc(func(c web.C, w http.ResponseWriter, r *http.Request) {
 		newctx := context.WithValue(ctx, "urlparams", c.URLParams)
@@ -109,20 +179,24 @@ func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
 }
 
 func Login(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	log.Info("Handler: Login")
 	c := ctx.Value("oidc").(*oidc.Client)
 	oac, err := c.OAuthClient()
 	if err != nil {
-		panic("unable to proceed")
+		http.Error(w, "oauth failed", http.StatusInternalServerError)
+		return
 	}
 
 	u, err := url.Parse(oac.AuthCodeURL("", "", ""))
 	if err != nil {
-		panic("unable to proceed")
+		http.Error(w, "oauth failed", http.StatusInternalServerError)
+		return
 	}
 	http.Redirect(w, r, u.String(), http.StatusFound)
 }
 
 func OAuth2Redirect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	log.Info("Handler: OAuth2Redirect")
 	c := ctx.Value("oidc").(*oidc.Client)
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -141,9 +215,22 @@ func OAuth2Redirect(ctx context.Context, w http.ResponseWriter, r *http.Request)
 		http.Error(w, fmt.Sprintf("unable to construct claims: %v", err), http.StatusBadRequest)
 		return
 	}
+	email, ok := claims["email"]
+	if !ok {
+		http.Error(w, "Could not find verified email address", http.StatusBadRequest)
+		return
+	}
 
-	s := fmt.Sprintf("claims: %v", claims)
-	w.Write([]byte(s))
+	//if name, ok := claims["name"]; !ok {
+	//	http.Error(w, "Could not find name", http.StatusBadRequest)
+	//	return
+	//}
+
+	session := ctx.Value("session").(*sessions.Session)
+	session.Values["user"] = email
+	session.Save(r, w)
+
+	http.Redirect(w, r, "/wall", http.StatusFound)
 }
 
 func Index(ctx context.Context, w http.ResponseWriter, r *http.Request) {

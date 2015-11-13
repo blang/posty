@@ -20,6 +20,18 @@
       "URI": "https://github.com/godbus/dbus",
       "Ref": "c7fdd8b5cd55e87b4e1f4e372cdb1db61dd6c66f"
     },
+    "vendor/src/github.com/gorilla/context": {
+      "URI": "https://github.com/gorilla/context",
+      "Ref": "1c83b3eabd45b6d76072b66b746c20815fb2872d"
+    },
+    "vendor/src/github.com/gorilla/securecookie": {
+      "URI": "https://github.com/gorilla/securecookie",
+      "Ref": "e95799a481bbcc3d01c2ad5178524cb8bec9f370"
+    },
+    "vendor/src/github.com/gorilla/sessions": {
+      "URI": "https://github.com/gorilla/sessions",
+      "Ref": "f7261893ca3ea922c30eabe742c036d2c1de6e0a"
+    },
     "vendor/src/github.com/jonboulle/clockwork": {
       "URI": "https://github.com/jonboulle/clockwork",
       "Ref": "fad208dd89dbc316a149043e332a192477f0e2a2"
