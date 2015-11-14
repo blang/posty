@@ -4,15 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
+	"posty/controller"
+	"posty/middleware"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/coreos/go-oidc/oidc"
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/securecookie"
-	"github.com/gorilla/sessions"
 	"github.com/rs/xhandler"
 	"github.com/zenazn/goji/web"
 	"golang.org/x/net/context"
@@ -62,120 +61,50 @@ func main() {
 	if !checkFlags() {
 		os.Exit(1)
 	}
-	// OpenID
-	cc := oidc.ClientCredentials{
-		ID:     *clientID,
-		Secret: *clientSecret,
+
+	// OAuth / OpenID Connect
+	authController := controller.AuthController{}
+	if err := authController.InitOAuth(*clientID, *clientSecret, oauthDiscovery, *oauthRedirectURL); err != nil {
+		log.Fatalf("Error initializing OAuth: %s", err)
 	}
-
-	log.Printf("fetching provider config from %s...", oauthDiscovery)
-
-	var cfg oidc.ProviderConfig
-	var err error
-	for {
-		cfg, err = oidc.FetchProviderConfig(http.DefaultClient, oauthDiscovery)
-		if err == nil {
-			break
-		}
-
-		log.Printf("failed fetching provider config, trying again: %v", err)
-		time.Sleep(3 * time.Second)
-	}
-
-	log.Printf("fetched provider config from %s", oauthDiscovery)
-
-	ccfg := oidc.ClientConfig{
-		ProviderConfig: cfg,
-		Credentials:    cc,
-		RedirectURL:    *oauthRedirectURL,
-	}
-
-	client, err := oidc.NewClient(ccfg)
-	if err != nil {
-		log.Fatalf("unable to create Client: %v", err)
-	}
-
-	client.SyncProviderConfig(oauthDiscovery)
 
 	// Middleware
 	baseChain := xhandler.Chain{}
 	baseChain.UseC(xhandler.TimeoutHandler(2 * time.Second))
 
 	// Session management
-	sessionStore := sessions.NewCookieStore([]byte(*sessionHashKey), []byte(*sessionBlockKey))
-	baseChain.UseC(SessionHandler(sessionStore, "posty-session"))
+	sessionMiddleware := middleware.Session{}
+	sessionMiddleware.Init([]byte(*sessionHashKey), []byte(*sessionBlockKey))
+	baseChain.UseC(sessionMiddleware.Enable("posty-session"))
 
 	// Chain for authenticated routes
 	authedChain := xhandler.Chain{}
 	authedChain = append(authedChain, baseChain...)
-	authedChain.UseC(AuthenticatedFilter("/login"))
+	authedChain.UseC(middleware.AuthenticatedFilter("/login"))
 
 	// Chain for unauthenticated routes
 	unauthedChain := xhandler.Chain{}
 	unauthedChain = append(unauthedChain, baseChain...)
-	unauthedChain.UseC(UnauthenticatedFilter("/wall"))
+	unauthedChain.UseC(middleware.UnauthenticatedFilter("/wall"))
 
-	// Router
+	// Main Context
+	ctx := context.Background()
+	route := func(chain xhandler.Chain, handler xhandler.HandlerC) web.Handler {
+		return handle(ctx, chain.HandlerC(handler))
+	}
+
+	// Routes
 	mux := web.New()
-	mainContext := context.WithValue(context.Background(), "oidc", client)
-	mux.Get("/wall", handle(mainContext, authedChain.HandlerC(xhandler.HandlerFuncC(Index))))
-	mux.Get("/login", handle(mainContext, unauthedChain.HandlerC(xhandler.HandlerFuncC(Login))))
-	mux.Get("/logout", handle(mainContext, authedChain.HandlerC(xhandler.HandlerFuncC(Logout))))
-	mux.Get("/oauth2cb", handle(mainContext, unauthedChain.HandlerC(xhandler.HandlerFuncC(OAuth2Redirect))))
+	mux.Get("/wall", route(authedChain, Index()))
+	mux.Get("/login", route(unauthedChain, authController.Login()))
+	mux.Get("/logout", route(authedChain, authController.Logout("/login")))
+	mux.Get("/oauth2cb", route(unauthedChain, authController.OAuth2Callback("/wall")))
+
 	log.Infof("Listening on %s", *listen)
 	log.Fatal(http.ListenAndServe(":8080", gctx.ClearHandler(mux)))
 }
 
-func SessionHandler(store *sessions.CookieStore, name string) func(next xhandler.HandlerC) xhandler.HandlerC {
-	return func(next xhandler.HandlerC) xhandler.HandlerC {
-		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-			session, err := store.Get(r, name)
-			if err != nil {
-				log.Infof("Could not decode session %q from %q: %s", name, r.RemoteAddr, err)
-			}
-			ctx = context.WithValue(ctx, "session", session)
-			next.ServeHTTPC(ctx, w, r)
-		})
-	}
-}
-
-func AuthenticatedFilter(loginUrl string) func(next xhandler.HandlerC) xhandler.HandlerC {
-	return func(next xhandler.HandlerC) xhandler.HandlerC {
-		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-			session, ok := ctx.Value("session").(*sessions.Session)
-			if !ok {
-				log.Error("Context without valid session")
-				http.Error(w, "Something went wrong", http.StatusInternalServerError)
-				return
-			}
-			if _, ok := session.Values["user"]; !ok {
-				log.Info("Handler: Is not loggedin")
-				http.Redirect(w, r, loginUrl, http.StatusFound)
-				return
-			}
-			next.ServeHTTPC(ctx, w, r)
-		})
-	}
-}
-
-func UnauthenticatedFilter(loggedInUrl string) func(next xhandler.HandlerC) xhandler.HandlerC {
-	return func(next xhandler.HandlerC) xhandler.HandlerC {
-		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-			session, ok := ctx.Value("session").(*sessions.Session)
-			if !ok {
-				log.Error("Context without valid session")
-				http.Error(w, "Something went wrong", http.StatusInternalServerError)
-				return
-			}
-			if _, ok := session.Values["user"]; ok {
-				log.Info("Handler: Is loggedin")
-				http.Redirect(w, r, loggedInUrl, http.StatusFound)
-				return
-			}
-			next.ServeHTTPC(ctx, w, r)
-		})
-	}
-}
+// handler transformation xhandler.HandlerC -> web.Handler
 func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
 	return web.HandlerFunc(func(c web.C, w http.ResponseWriter, r *http.Request) {
 		newctx := context.WithValue(ctx, "urlparams", c.URLParams)
@@ -183,78 +112,16 @@ func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
 	})
 }
 
-func Login(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	log.Info("Handler: Login")
-	c := ctx.Value("oidc").(*oidc.Client)
-	oac, err := c.OAuthClient()
-	if err != nil {
-		http.Error(w, "oauth failed", http.StatusInternalServerError)
-		return
-	}
-
-	u, err := url.Parse(oac.AuthCodeURL("", "", ""))
-	if err != nil {
-		http.Error(w, "oauth failed", http.StatusInternalServerError)
-		return
-	}
-	http.Redirect(w, r, u.String(), http.StatusFound)
-}
-
-func Logout(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	log.Info("Handler: Logout")
-	session := ctx.Value("session").(*sessions.Session)
-	delete(session.Values, "user")
-	session.Save(r, w)
-
-	http.Redirect(w, r, "/login", http.StatusFound)
-}
-
-func OAuth2Redirect(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	log.Info("Handler: OAuth2Redirect")
-	c := ctx.Value("oidc").(*oidc.Client)
-	code := r.URL.Query().Get("code")
-	if code == "" {
-		http.Error(w, "code query param must be set", http.StatusBadRequest)
-		return
-	}
-
-	tok, err := c.ExchangeAuthCode(code)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("unable to verify auth code with issuer: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	claims, err := tok.Claims()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("unable to construct claims: %v", err), http.StatusBadRequest)
-		return
-	}
-	email, ok := claims["email"]
-	if !ok {
-		http.Error(w, "Could not find verified email address", http.StatusBadRequest)
-		return
-	}
-
-	//if name, ok := claims["name"]; !ok {
-	//	http.Error(w, "Could not find name", http.StatusBadRequest)
-	//	return
-	//}
-
-	session := ctx.Value("session").(*sessions.Session)
-	session.Values["user"] = email
-	session.Save(r, w)
-
-	http.Redirect(w, r, "/wall", http.StatusFound)
-}
-
-func Index(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	params := ctx.Value("urlparams").(map[string]string)
-	name := params["name"]
-	select {
-	case <-time.After(100 * time.Millisecond):
-	case <-ctx.Done():
-		http.Error(w, "Timeout", 400)
-		return
-	}
-	fmt.Fprintf(w, "Welcome! %s\n", name)
+func Index() xhandler.HandlerC {
+	return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+		params := ctx.Value("urlparams").(map[string]string)
+		name := params["name"]
+		select {
+		case <-time.After(100 * time.Millisecond):
+		case <-ctx.Done():
+			http.Error(w, "Timeout", 400)
+			return
+		}
+		fmt.Fprintf(w, "Welcome! %s\n", name)
+	})
 }
