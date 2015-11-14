@@ -4,6 +4,10 @@
       "URI": "https://github.com/Sirupsen/logrus",
       "Ref": "fe6f2b03125e4fcafb21406381010e363a072c80"
     },
+    "vendor/src/github.com/aws/aws-sdk-go": {
+      "URI": "https://github.com/aws/aws-sdk-go",
+      "Ref": "ce51895e994693d65ab997ae48032bf13a9290b7"
+    },
     "vendor/src/github.com/coreos/go-oidc": {
       "URI": "https://github.com/coreos/go-oidc",
       "Ref": "5d3ac76573da4d1e3254d3748217bdf89154c667"
@@ -15,6 +19,10 @@
     "vendor/src/github.com/coreos/pkg": {
       "URI": "https://github.com/coreos/pkg",
       "Ref": "2c77715c4df99b5420ffcae14ead08f52104065d"
+    },
+    "vendor/src/github.com/go-ini/ini": {
+      "URI": "https://github.com/go-ini/ini",
+      "Ref": "060d7da055ba6ec5ea7a31f116332fe5efa04ce0"
     },
     "vendor/src/github.com/godbus/dbus": {
       "URI": "https://github.com/godbus/dbus",
@@ -32,13 +40,29 @@
       "URI": "https://github.com/gorilla/sessions",
       "Ref": "f7261893ca3ea922c30eabe742c036d2c1de6e0a"
     },
+    "vendor/src/github.com/jmespath/go-jmespath": {
+      "URI": "https://github.com/jmespath/go-jmespath",
+      "Ref": "3433f3ea46d9f8019119e7dd41274e112a2359a9"
+    },
     "vendor/src/github.com/jonboulle/clockwork": {
       "URI": "https://github.com/jonboulle/clockwork",
       "Ref": "fad208dd89dbc316a149043e332a192477f0e2a2"
     },
+    "vendor/src/github.com/jtolds/gls": {
+      "URI": "https://github.com/jtolds/gls",
+      "Ref": "9a4a02dbe491bef4bab3c24fd9f3087d6c4c6690"
+    },
     "vendor/src/github.com/rs/xhandler": {
       "URI": "https://github.com/rs/xhandler",
       "Ref": "b9e009e7d55fe16f8eb760b80ee8261e5ef90bda"
+    },
+    "vendor/src/github.com/satori/go.uuid": {
+      "URI": "https://github.com/satori/go.uuid",
+      "Ref": "d41af8bb6a7704f00bc3b7cba9355ae6a5a80048"
+    },
+    "vendor/src/github.com/smartystreets/assertions": {
+      "URI": "https://github.com/smartystreets/assertions",
+      "Ref": "6427400a39401722b896971821c0d69f8a31818f"
     },
     "vendor/src/github.com/zenazn/goji": {
       "URI": "https://github.com/zenazn/goji",
