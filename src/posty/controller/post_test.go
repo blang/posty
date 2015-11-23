@@ -96,6 +96,9 @@ func TestCreate(t *testing.T) {
 		t.Fatalf("Could not create request")
 	}
 	c.Create(ctx, w, r)
+	assert.NotNil(post)
+	assert.Equal("id", post.ID)
+	assert.Equal("uid123", post.UID)
 	assert.Equal(http.StatusCreated, w.Code, "Invalid statuscode")
 	assert.Equal(output, strings.TrimSpace(w.Body.String()), "Invalid output")
 }
@@ -118,15 +121,6 @@ func TestCreateInvalidJson(t *testing.T) {
 	c.Create(ctx, w, r)
 	assert.Equal(http.StatusBadRequest, w.Code, "Invalid statuscode")
 	assert.True(strings.Contains(strings.TrimSpace(w.Body.String()), output_partial), fmt.Sprintf("Invalid output: %s", w.Body.String()))
-}
-
-func TestJsonError(t *testing.T) {
-	assert := assert.New(t)
-	const output = `{"errors":[{"status":"400","title":"MyError"}]}`
-	w := httptest.NewRecorder()
-	jsonError(w, nil, CERR_CLIENT, "MyError")
-	assert.Equal(output, w.Body.String(), "Invalid response")
-	assert.Equal(http.StatusBadRequest, w.Code, "Invalid statuscode")
 }
 
 func TestRemove(t *testing.T) {
@@ -158,6 +152,9 @@ func TestRemove(t *testing.T) {
 		t.Fatalf("Could not create request")
 	}
 	c.Remove(ctx, w, r)
+	assert.NotNil(post)
+	assert.Equal("123", post.ID)
+	assert.Equal("uid123", post.UID)
 	assert.Equal(http.StatusNoContent, w.Code, "Invalid statuscode")
 	assert.Equal("", strings.TrimSpace(w.Body.String()), "Invalid output")
 

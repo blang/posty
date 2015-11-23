@@ -21,39 +21,6 @@ type PostController struct {
 	Model PostDataProvider
 }
 
-type errorResponse struct {
-	Errors []ControllerError `json:"errors"`
-}
-type ControllerError struct {
-	Status int    `json:"status,string"`
-	Title  string `json:"title"`
-}
-
-const (
-	CERR_CLIENT int = http.StatusBadRequest
-	CERR_SERVER     = http.StatusInternalServerError
-)
-
-func jsonError(w http.ResponseWriter, r *http.Request, code int, msg string) {
-	log.Warnf("JSON Error: %d %s", code, msg)
-
-	cerr := ControllerError{
-		Status: code,
-		Title:  msg,
-	}
-	errResp := errorResponse{
-		Errors: []ControllerError{
-			cerr,
-		},
-	}
-	b, err := json.Marshal(errResp)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	w.WriteHeader(code)
-	w.Write(b)
-}
-
 type postsResponse struct {
 	Data []*jsonPost `json:"data"`
 }
@@ -68,7 +35,7 @@ type jsonPost struct {
 func (p *PostController) Posts(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	ps, err := p.Model.GetPosts()
 	if err != nil {
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 		return
 	}
 	jsonPosts := make([]*jsonPost, len(ps))
@@ -86,7 +53,7 @@ func (p *PostController) Posts(ctx context.Context, w http.ResponseWriter, r *ht
 	enc := json.NewEncoder(w)
 	err = enc.Encode(&resp)
 	if err != nil {
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 		return
 	}
 }
@@ -105,7 +72,7 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 	user, ok := ctx.Value("user").(string)
 	if !ok {
 		log.Warnf("Invalid user context")
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 		return
 	}
 	dec := json.NewDecoder(r.Body)
@@ -113,11 +80,11 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 	var req postCreateReq
 	err := dec.Decode(&req)
 	if err != nil {
-		jsonError(w, r, CERR_CLIENT, "")
+		jsonError(w, r, cErrClient, "")
 		return
 	}
 	if req.Data.Message == "" || len(req.Data.Message) < 6 {
-		jsonError(w, r, CERR_CLIENT, "Message too short")
+		jsonError(w, r, cErrClient, "Message too short")
 		return
 	}
 	post := p.Model.NewPost(user)
@@ -125,7 +92,7 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 	err = p.Model.SaveNew(post)
 	if err != nil {
 		log.Warnf("Could not save post: %s", err)
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 	}
 	jsonPost := &jsonPost{
 		ID:        post.ID,
@@ -141,7 +108,7 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 	err = enc.Encode(postCreateResp)
 	if err != nil {
 		log.Warnf("Could not save post: %s", err)
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 	}
 }
 
@@ -149,13 +116,13 @@ func (p *PostController) Remove(ctx context.Context, w http.ResponseWriter, r *h
 	user, ok := ctx.Value("user").(string)
 	if !ok {
 		log.Warnf("Invalid user context")
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 		return
 	}
 	urlParams := ctx.Value("urlparams").(map[string]string)
 	id, ok := urlParams["id"]
 	if !ok {
-		jsonError(w, r, CERR_CLIENT, "Missing id parameter")
+		jsonError(w, r, cErrClient, "Missing id parameter")
 		return
 	}
 	post, err := p.Model.GetByID(id)
@@ -169,7 +136,7 @@ func (p *PostController) Remove(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	err = p.Model.Remove(post)
 	if err != nil {
-		jsonError(w, r, CERR_SERVER, "")
+		jsonError(w, r, cErrServer, "")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
