@@ -46,3 +46,24 @@ func UnauthenticatedFilter(loggedInUrl string) func(next xhandler.HandlerC) xhan
 		})
 	}
 }
+
+func UserContext() func(next xhandler.HandlerC) xhandler.HandlerC {
+	return func(next xhandler.HandlerC) xhandler.HandlerC {
+		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+			session, ok := ctx.Value("session").(*sessions.Session)
+			if !ok {
+				log.Error("Context without valid session")
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+				return
+			}
+			user, ok := session.Values["user"]
+			if !ok {
+				log.Error("Context without valid session")
+				http.Error(w, "Something went wrong", http.StatusInternalServerError)
+				return
+			}
+			ctx = context.WithValue(ctx, "user", user)
+			next.ServeHTTPC(ctx, w, r)
+		})
+	}
+}

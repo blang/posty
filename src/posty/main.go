@@ -7,9 +7,14 @@ import (
 	"os"
 	"posty/controller"
 	"posty/middleware"
+	"posty/model"
+	"posty/model/awsdynamo"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/securecookie"
 	"github.com/rs/xhandler"
@@ -19,6 +24,8 @@ import (
 
 var (
 	listen           = flag.String("http", ":8080", "Listen on")
+	awsprofile       = flag.String("awsprofile", os.Getenv("AWS_PROFILE"), "AWS Profile using shared credential file")
+	debug            = flag.Bool("debug", false, "Enable debugging")
 	clientID         = flag.String("client-id", "", "OAuth client ID")
 	clientSecret     = flag.String("client-secret", "", "OAuth client secret")
 	oauthRedirectURL = flag.String("oauth-redirect-url", "http://127.0.0.1:8080/oauth2cb", "http://[host]/oauth2cb")
@@ -62,10 +69,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	cfg := &aws.Config{
+		Region:      aws.String("us-west-2"),
+		Endpoint:    aws.String("http://localhost:8000"),
+		Credentials: credentials.NewSharedCredentials("", *awsprofile),
+	}
+	sess := session.New(cfg)
+	if *debug {
+		sess.Config.LogLevel = aws.LogLevel(aws.LogDebug)
+	}
+
+	// Model
+	var m model.Model
+	m = awsdynamo.NewModelFromSession(sess)
+
+	// Controller
 	// OAuth / OpenID Connect
 	authController := controller.AuthController{}
 	if err := authController.InitOAuth(*clientID, *clientSecret, oauthDiscovery, *oauthRedirectURL); err != nil {
 		log.Fatalf("Error initializing OAuth: %s", err)
+	}
+	postController := &controller.PostController{
+		Model: m.PostPeer(),
 	}
 
 	// Middleware
@@ -81,6 +106,12 @@ func main() {
 	authedChain := xhandler.Chain{}
 	authedChain = append(authedChain, baseChain...)
 	authedChain.UseC(middleware.AuthenticatedFilter("/login"))
+	authedChain.UseC(middleware.UserContext())
+
+	// Chain for authenticated routes with json response
+	jsonChain := xhandler.Chain{}
+	jsonChain = append(jsonChain, authedChain...)
+	jsonChain.UseC(middleware.JSONWrapper())
 
 	// Chain for unauthenticated routes
 	unauthedChain := xhandler.Chain{}
@@ -96,6 +127,9 @@ func main() {
 	// Routes
 	mux := web.New()
 	mux.Get("/wall", route(authedChain, Index()))
+	mux.Get("/api/posts", route(jsonChain, xhandler.HandlerFuncC(postController.Posts)))
+	mux.Post("/api/posts", route(jsonChain, xhandler.HandlerFuncC(postController.Create)))
+	mux.Delete("/api/posts/:id", route(jsonChain, xhandler.HandlerFuncC(postController.Remove)))
 	mux.Get("/login", route(unauthedChain, authController.Login()))
 	mux.Get("/logout", route(authedChain, authController.Logout("/login")))
 	mux.Get("/oauth2cb", route(unauthedChain, authController.OAuth2Callback("/wall")))
