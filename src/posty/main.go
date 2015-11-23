@@ -85,7 +85,9 @@ func main() {
 
 	// Controller
 	// OAuth / OpenID Connect
-	authController := controller.AuthController{}
+	authController := controller.AuthController{
+		Data: m.UserPeer(),
+	}
 	if err := authController.InitOAuth(*clientID, *clientSecret, oauthDiscovery, *oauthRedirectURL); err != nil {
 		log.Fatalf("Error initializing OAuth: %s", err)
 	}

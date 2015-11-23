@@ -89,8 +89,12 @@ func marshalUser(u *model.User, items map[string]*dynamodb.AttributeValue) error
 	}
 	items["id"] = &dynamodb.AttributeValue{S: aws.String(u.ID)}
 	items["oauthid"] = &dynamodb.AttributeValue{S: aws.String(u.OAuthID)}
-	items["email"] = &dynamodb.AttributeValue{S: aws.String(u.Email)}
-	items["username"] = &dynamodb.AttributeValue{S: aws.String(u.Username)}
+	if u.Email != "" {
+		items["email"] = &dynamodb.AttributeValue{S: aws.String(u.Email)}
+	}
+	if u.Username != "" {
+		items["username"] = &dynamodb.AttributeValue{S: aws.String(u.Username)}
+	}
 	items["created_at"] = &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(u.CreatedAt.Unix(), 10))}
 	items["lastlogin"] = &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(u.LastLogin.Unix(), 10))}
 

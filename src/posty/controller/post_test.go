@@ -16,7 +16,7 @@ import (
 type mockPostPeer struct {
 	postsFn  func() ([]*model.Post, error)
 	newFn    func(uid string) *model.Post
-	safeFn   func(p *model.Post) error
+	saveFn   func(p *model.Post) error
 	getidFn  func(id string) (*model.Post, error)
 	removeFn func(p *model.Post) error
 }
@@ -30,7 +30,7 @@ func (m *mockPostPeer) NewPost(uid string) *model.Post {
 }
 
 func (m *mockPostPeer) SaveNew(p *model.Post) error {
-	return m.safeFn(p)
+	return m.saveFn(p)
 }
 
 func (m *mockPostPeer) Remove(p *model.Post) error {
@@ -80,7 +80,7 @@ func TestCreate(t *testing.T) {
 				CreatedAt: ts,
 			}
 		},
-		safeFn: func(p *model.Post) error {
+		saveFn: func(p *model.Post) error {
 			post = p
 			return nil
 		},
