@@ -54,7 +54,7 @@ func TestAuthLoginGoogle(t *testing.T) {
 		Data: mock,
 	}
 
-	u, err := ac.loginGoogle(map[string]interface{}{"sub": "123"})
+	u, err := ac.loginUser("google:123")
 	if err != nil {
 		t.Fatalf("Error: %s", err)
 	}
@@ -62,7 +62,6 @@ func TestAuthLoginGoogle(t *testing.T) {
 	assert.Equal("uid123", updateCalled)
 	assert.Equal("google:123", u.OAuthID)
 	assert.Equal(ts.Unix(), u.CreatedAt.Unix(), "CreatedAt does not match")
-	assert.Equal("uid123", updateCalled)
 }
 
 func TestAuthLoginGoogleCreateUser(t *testing.T) {
@@ -93,7 +92,7 @@ func TestAuthLoginGoogleCreateUser(t *testing.T) {
 		Data: mock,
 	}
 
-	u, err := ac.loginGoogle(map[string]interface{}{"sub": "123"})
+	u, err := ac.loginUser("google:123")
 	if err != nil {
 		t.Fatalf("Error: %s", err)
 	}

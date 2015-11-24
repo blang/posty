@@ -9,6 +9,7 @@ import (
 	"posty/middleware"
 	"posty/model"
 	"posty/model/awsdynamo"
+	"posty/oidc"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -17,24 +18,32 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
 	"github.com/rs/xhandler"
 	"github.com/zenazn/goji/web"
 	"golang.org/x/net/context"
 )
 
-var (
-	listen           = flag.String("http", ":8080", "Listen on")
-	awsprofile       = flag.String("awsprofile", os.Getenv("AWS_PROFILE"), "AWS Profile using shared credential file")
-	debug            = flag.Bool("debug", false, "Enable debugging")
-	clientID         = flag.String("client-id", "", "OAuth client ID")
-	clientSecret     = flag.String("client-secret", "", "OAuth client secret")
-	oauthRedirectURL = flag.String("oauth-redirect-url", "http://127.0.0.1:8080/oauth2cb", "http://[host]/oauth2cb")
-	sessionHashKey   = flag.String("session-hash-key", "", "Session hash key, 32/64 Byte")
-	sessionBlockKey  = flag.String("session-block-key", "", "Session block encryption key, valid lengths are 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256")
-)
+const envprefix = "POSTY_"
 
-const (
-	oauthDiscovery = "https://accounts.google.com"
+func envOrDefault(env string, def string) string {
+	if ev := os.Getenv(envprefix + env); ev != "" {
+		return ev
+	}
+	return def
+}
+
+var (
+	listen                 = flag.String("http", envOrDefault("LISTEN", ":8080"), "Listen on")
+	awsprofile             = flag.String("awsprofile", envOrDefault("AWS_PROFILE", ""), "AWS Profile using shared credential file")
+	debug                  = flag.Bool("debug", false, "Enable debugging")
+	oidcGoogleClientID     = flag.String("oidc-google-client-id", envOrDefault("OIDC_GOOGLE_CLIENT_ID", ""), "Google OpenID Connect Client ID")
+	oidcGoogleClientSecret = flag.String("oidc-google-client-secret", envOrDefault("OIDC_GOOGLE_CLIENT_SECRET", ""), "Google OpenID Connect Client Secret")
+	oidcPaypalClientID     = flag.String("oidc-paypal-client-id", envOrDefault("OIDC_PAYPAL_CLIENT_ID", ""), "Paypal OpenID Connect Client ID")
+	oidcPaypalClientSecret = flag.String("oidc-paypal-client-secret", envOrDefault("OIDC_PAYPAL_CLIENT_SECRET", ""), "Paypal OpenID Connect Client Secret")
+	publicURL              = flag.String("public-url", envOrDefault("PUBLIC_URL", "http://127.0.0.1:8080"), "http://[host]")
+	sessionHashKey         = flag.String("session-hash-key", envOrDefault("SESSION_HASH_KEY", ""), "Session hash key, 32/64 Byte")
+	sessionBlockKey        = flag.String("session-block-key", envOrDefault("SESSION_BLOCK_KEY", ""), "Session block encryption key, valid lengths are 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256")
 )
 
 func checkFlags() bool {
@@ -43,15 +52,23 @@ func checkFlags() bool {
 		log.Fatal("Flag 'listen' must be set")
 		return false
 	}
-	if *clientID == "" {
-		log.Fatal("Flag 'client-id' must be set")
+	if *oidcGoogleClientID == "" {
+		log.Fatal("Flag 'oidc-google-client-id' must be set")
 		return false
 	}
-	if *clientSecret == "" {
-		log.Fatal("Flag 'client-secret' must be set")
+	if *oidcGoogleClientSecret == "" {
+		log.Fatal("Flag 'oidc-google-client-secret' must be set")
 		return false
 	}
-	if *oauthRedirectURL == "" {
+	if *oidcPaypalClientID == "" {
+		log.Fatal("Flag 'oidc-paypal-client-id' must be set")
+		return false
+	}
+	if *oidcPaypalClientSecret == "" {
+		log.Fatal("Flag 'oidc-paypal-client-secret' must be set")
+		return false
+	}
+	if *publicURL == "" {
 		log.Fatal("Flag 'oauth-redirect-url' must be set")
 		return false
 	}
@@ -69,6 +86,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	sessionStore := sessions.NewCookieStore([]byte(*sessionHashKey), []byte(*sessionBlockKey))
+
+	// OpenID Connect Providers
+
+	// Google
+	oidcGoogleLoginRoute := "/logingoogle"
+	oidcGoogleCBRoute := "/gcallback"
+	oidcGoogle := &oidc.Google{
+		ClientID:     *oidcGoogleClientID,
+		ClientSecret: *oidcGoogleClientSecret,
+		RedirectURI:  *publicURL + oidcGoogleCBRoute,
+		SessionStore: sessionStore,
+	}
+
+	// PayPal
+	oidcPaypalLoginRoute := "/loginpaypal"
+	oidcPaypalCBRoute := "/pcallback"
+	oidcPaypal := &oidc.Paypal{
+		ClientID:     *oidcPaypalClientID,
+		ClientSecret: *oidcPaypalClientSecret,
+		RedirectURI:  *publicURL + oidcPaypalCBRoute,
+		SessionStore: sessionStore,
+	}
+
+	// Dynamodb
 	cfg := &aws.Config{
 		Region:      aws.String("us-west-2"),
 		Endpoint:    aws.String("http://localhost:8000"),
@@ -85,12 +127,10 @@ func main() {
 
 	// Controller
 	// OAuth / OpenID Connect
-	authController := controller.AuthController{
-		Data: m.UserPeer(),
-	}
-	if err := authController.InitOAuth(*clientID, *clientSecret, oauthDiscovery, *oauthRedirectURL); err != nil {
-		log.Fatalf("Error initializing OAuth: %s", err)
-	}
+	authCGoogle := controller.NewAuthController(m.UserPeer(), oidcGoogle, "google")
+	authCPaypal := controller.NewAuthController(m.UserPeer(), oidcPaypal, "paypal")
+
+	// Post Controller
 	postController := &controller.PostController{
 		Model: m.PostPeer(),
 	}
@@ -132,9 +172,12 @@ func main() {
 	mux.Get("/api/posts", route(jsonChain, xhandler.HandlerFuncC(postController.Posts)))
 	mux.Post("/api/posts", route(jsonChain, xhandler.HandlerFuncC(postController.Create)))
 	mux.Delete("/api/posts/:id", route(jsonChain, xhandler.HandlerFuncC(postController.Remove)))
-	mux.Get("/login", route(unauthedChain, authController.Login()))
-	mux.Get("/logout", route(authedChain, authController.Logout("/login")))
-	mux.Get("/oauth2cb", route(unauthedChain, authController.OAuth2Callback("/wall")))
+	// OIDC Routes
+	mux.Get(oidcGoogleLoginRoute, route(unauthedChain, authCGoogle.Login()))
+	mux.Get(oidcGoogleCBRoute, route(unauthedChain, authCGoogle.Callback("/wall")))
+	mux.Get(oidcPaypalLoginRoute, route(unauthedChain, authCPaypal.Login()))
+	mux.Get(oidcPaypalCBRoute, route(unauthedChain, authCPaypal.Callback("/wall")))
+	mux.Get("/logout", route(authedChain, authCGoogle.Logout("/login")))
 
 	log.Infof("Listening on %s", *listen)
 	log.Fatal(http.ListenAndServe(":8080", gctx.ClearHandler(mux)))
