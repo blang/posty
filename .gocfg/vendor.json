@@ -20,6 +20,10 @@
       "URI": "https://github.com/coreos/pkg",
       "Ref": "2c77715c4df99b5420ffcae14ead08f52104065d"
     },
+    "vendor/src/github.com/dgrijalva/jwt-go": {
+      "URI": "https://github.com/dgrijalva/jwt-go",
+      "Ref": "f164e17f59b82642a3895ba065c385db6c547344"
+    },
     "vendor/src/github.com/go-ini/ini": {
       "URI": "https://github.com/go-ini/ini",
       "Ref": "060d7da055ba6ec5ea7a31f116332fe5efa04ce0"
