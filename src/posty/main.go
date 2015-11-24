@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	filepath "path"
 	"posty/controller"
 	"posty/middleware"
 	"posty/model"
@@ -36,6 +37,7 @@ func envOrDefault(env string, def string) string {
 var (
 	listen                 = flag.String("http", envOrDefault("LISTEN", ":8080"), "Listen on")
 	awsprofile             = flag.String("awsprofile", envOrDefault("AWS_PROFILE", ""), "AWS Profile using shared credential file")
+	frontendPath           = flag.String("frontend-path", envOrDefault("FRONTEND_PATH", "./frontend"), "Path to frontend")
 	debug                  = flag.Bool("debug", false, "Enable debugging")
 	oidcGoogleClientID     = flag.String("oidc-google-client-id", envOrDefault("OIDC_GOOGLE_CLIENT_ID", ""), "Google OpenID Connect Client ID")
 	oidcGoogleClientSecret = flag.String("oidc-google-client-secret", envOrDefault("OIDC_GOOGLE_CLIENT_SECRET", ""), "Google OpenID Connect Client Secret")
@@ -50,6 +52,10 @@ func checkFlags() bool {
 	flag.Parse()
 	if *listen == "" {
 		log.Fatal("Flag 'listen' must be set")
+		return false
+	}
+	if *frontendPath == "" {
+		log.Fatal("Flag 'frontend-path' must be set")
 		return false
 	}
 	if *oidcGoogleClientID == "" {
@@ -158,7 +164,7 @@ func main() {
 	// Chain for unauthenticated routes
 	unauthedChain := xhandler.Chain{}
 	unauthedChain = append(unauthedChain, baseChain...)
-	unauthedChain.UseC(middleware.UnauthenticatedFilter("/wall"))
+	unauthedChain.UseC(middleware.UnauthenticatedFilter("/"))
 
 	// Main Context
 	ctx := context.Background()
@@ -168,16 +174,20 @@ func main() {
 
 	// Routes
 	mux := web.New()
-	mux.Get("/wall", route(authedChain, Index()))
 	mux.Get("/api/posts", route(jsonChain, xhandler.HandlerFuncC(postController.Posts)))
 	mux.Post("/api/posts", route(jsonChain, xhandler.HandlerFuncC(postController.Create)))
 	mux.Delete("/api/posts/:id", route(jsonChain, xhandler.HandlerFuncC(postController.Remove)))
 	// OIDC Routes
 	mux.Get(oidcGoogleLoginRoute, route(unauthedChain, authCGoogle.Login()))
-	mux.Get(oidcGoogleCBRoute, route(unauthedChain, authCGoogle.Callback("/wall")))
+	mux.Get(oidcGoogleCBRoute, route(unauthedChain, authCGoogle.Callback("/")))
 	mux.Get(oidcPaypalLoginRoute, route(unauthedChain, authCPaypal.Login()))
-	mux.Get(oidcPaypalCBRoute, route(unauthedChain, authCPaypal.Callback("/wall")))
+	mux.Get(oidcPaypalCBRoute, route(unauthedChain, authCPaypal.Callback("/")))
 	mux.Get("/logout", route(authedChain, authCGoogle.Logout("/login")))
+
+	// Static file
+	mux.Get("/login", route(unauthedChain, serveSingleFile(filepath.Join(*frontendPath, "login.html"))))
+	mux.Get("/", route(authedChain, serveSingleFile(filepath.Join(*frontendPath, "index.html"))))
+	mux.Get("/static/*", route(baseChain, serveFiles(filepath.Join(*frontendPath, "/static"), "/static/")))
 
 	log.Infof("Listening on %s", *listen)
 	log.Fatal(http.ListenAndServe(":8080", gctx.ClearHandler(mux)))
@@ -202,5 +212,20 @@ func Index() xhandler.HandlerC {
 			return
 		}
 		fmt.Fprintf(w, "Welcome! %s\n", name)
+	})
+}
+
+func serveSingleFile(path string) xhandler.HandlerC {
+	return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+		log.Infof("Serve static file: %s", path)
+		http.ServeFile(w, r, path)
+	})
+}
+func serveFiles(path string, prefix string) xhandler.HandlerC {
+	fileserver := http.FileServer(http.Dir(path))
+	handler := http.StripPrefix(prefix, fileserver)
+	return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+		log.Infof("Serving: %s", r.RequestURI)
+		handler.ServeHTTP(w, r)
 	})
 }

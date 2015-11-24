@@ -1,0 +1,82 @@
+<div class="header">
+  <ul class="nav nav-pills pull-right">
+    <li><a ng-href="/logout">Logout</a></li>
+  </ul>
+  <h3 class="text-muted">Posty</h3>
+</div>
+
+<div class="jumbotron">
+    <h1>Post something</h1>
+    <div class="alert alert-danger" id="errorPostMsg" style="display:none;" role="alert">
+        <a href="#" class="alert-link"><strong>Oh snap!</strong> {{errorPostMsg}}</a>
+    </div>
+    <div class="alert alert-success" id="postMsg" style="display:none;" role="alert">
+        <a href="#" class="alert-link"><strong>Well done!</strong> {{postMsg}}</a>
+    </div>
+    <p class="lead">
+    Type something interesting 
+    </p>
+    <div class="col-md-12 postinput">
+        <input type="text" ng-model="msg" class="input-md col-md-12" />
+    </div>
+    <p><a class="btn btn-lg btn-success" ng-click="createPost(msg)">Splendid!<span class="glyphicon glyphicon-ok"></span></a></p>
+</div>
+
+<div class="row marketing">
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Posts {{testListMsg}}</h4>
+        </div>
+        <div class="col-md-6 ">
+            <form class="navbar-form navbar-right" role="search">
+                <div class="form-group">
+                    <input type="text" class="form-control" placeholder="Search" ng-model="searchText">
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="posts">
+        <div class="row" id="errorListMsg" style="display:none;">
+            <div class="alert alert-danger" role="alert">
+                <a href="#" class="alert-link"><strong>Oh snap!</strong> {{msgListError}}</a>
+            </div>
+        </div>
+        <div class="row" id="listMsg" style="display:none;">
+            <div class="alert alert-success" role="alert">
+                <a href="#" class="alert-link"><strong>Well done!</strong> {{listMsg}}</a>
+            </div>
+        </div>
+        <div class="row" ng-repeat="post in posts | filter:searchText">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h3 class="panel-title">{{post.user_id}} - {{post.created_at * 1000| date:'MM/dd/yyyy @ h:mma'}}</h3>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="pull-right">
+                                <a ng-click="removePost(post)"><i class="fa fa-times"></i></a>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body" style="word-wrap:break-word;">
+                    {{post.message}}
+                </div>
+            </div>
+        </div>
+        <div class="row" ng-show="!posts.length">
+            <div class="panel panel-default">
+                <div class="panel-body" style="word-wrap:break-word;">
+                    No posts to show
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<div class="footer">
+    <p><span class="glyphicon glyphicon-heart"></span> from the Yeoman team</p>
+</div>
