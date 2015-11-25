@@ -87,6 +87,15 @@ func checkFlags() bool {
 	return true
 }
 
+type postDataProvider struct {
+	model.PostPeer
+	UserPeer model.UserPeer
+}
+
+func (p *postDataProvider) GetUserByID(id string) (*model.User, error) {
+	return p.UserPeer.GetByID(id)
+}
+
 func main() {
 	if !checkFlags() {
 		os.Exit(1)
@@ -137,8 +146,12 @@ func main() {
 	authCPaypal := controller.NewAuthController(m.UserPeer(), oidcPaypal, "paypal")
 
 	// Post Controller
+	postContrData := &postDataProvider{
+		PostPeer: m.PostPeer(),
+		UserPeer: m.UserPeer(),
+	}
 	postController := &controller.PostController{
-		Model: m.PostPeer(),
+		Model: postContrData,
 	}
 
 	// Middleware

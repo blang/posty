@@ -18,6 +18,7 @@ func TestUnmarshalPost(t *testing.T) {
 	items["id"] = &dynamodb.AttributeValue{S: aws.String("pid123")}
 	items["uid"] = &dynamodb.AttributeValue{S: aws.String("uid123")}
 	items["message"] = &dynamodb.AttributeValue{S: aws.String("message")}
+	items["username"] = &dynamodb.AttributeValue{S: aws.String("username")}
 	items["created_at"] = &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(ts.UnixNano(), 10))}
 	var p model.Post
 	err := unmarshalPost(&p, items)
@@ -27,6 +28,7 @@ func TestUnmarshalPost(t *testing.T) {
 	assert.Equal("pid123", p.ID)
 	assert.Equal("uid123", p.UID)
 	assert.Equal("message", p.Message)
+	assert.Equal("username", p.Username)
 	assert.Equal(ts.UnixNano(), p.CreatedAt.UnixNano())
 }
 
@@ -36,6 +38,7 @@ func TestMarshalPost(t *testing.T) {
 	u.ID = "pid123"
 	u.UID = "uid123"
 	u.Message = "message"
+	u.Username = "username"
 	u.CreatedAt = time.Now().Add(-time.Hour)
 	m := make(map[string]*dynamodb.AttributeValue)
 	err := marshalPost(u, m)
@@ -72,5 +75,6 @@ func TestMarshalPost(t *testing.T) {
 	assert.Equal(u.ID, awsValueString("id"))
 	assert.Equal(u.UID, awsValueString("uid"))
 	assert.Equal(u.Message, awsValueString("message"))
+	assert.Equal(u.Username, awsValueString("username"))
 	assert.Equal(u.CreatedAt.UnixNano(), awsValueInt64("created_at"))
 }

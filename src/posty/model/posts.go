@@ -13,6 +13,7 @@ type PostPeer interface {
 type Post struct {
 	ID        string
 	UID       string
+	Username  string
 	Message   string
 	CreatedAt time.Time
 	IsNew     bool

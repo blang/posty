@@ -192,6 +192,11 @@ func unmarshalPost(p *model.Post, items map[string]*dynamodb.AttributeValue) err
 			p.Message = *v.S
 		}
 	}
+	if v, ok := items["username"]; ok {
+		if v.S != nil {
+			p.Username = *v.S
+		}
+	}
 	if v, ok := items["created_at"]; ok {
 		if v.N != nil {
 			ts64, err := strconv.ParseInt(*v.N, 10, 64)
@@ -213,6 +218,9 @@ func marshalPost(p *model.Post, items map[string]*dynamodb.AttributeValue) error
 	items["uid"] = &dynamodb.AttributeValue{S: aws.String(p.UID)}
 	if p.Message != "" {
 		items["message"] = &dynamodb.AttributeValue{S: aws.String(p.Message)}
+	}
+	if p.Username != "" {
+		items["username"] = &dynamodb.AttributeValue{S: aws.String(p.Username)}
 	}
 	items["created_at"] = &dynamodb.AttributeValue{N: aws.String(strconv.FormatInt(p.CreatedAt.UnixNano(), 10))}
 

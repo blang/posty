@@ -14,11 +14,16 @@ import (
 )
 
 type mockPostPeer struct {
-	postsFn  func() ([]*model.Post, error)
-	newFn    func(uid string) *model.Post
-	saveFn   func(p *model.Post) error
-	getidFn  func(id string) (*model.Post, error)
-	removeFn func(p *model.Post) error
+	userByIdFn func(id string) (*model.User, error)
+	postsFn    func() ([]*model.Post, error)
+	newFn      func(uid string) *model.Post
+	saveFn     func(p *model.Post) error
+	getidFn    func(id string) (*model.Post, error)
+	removeFn   func(p *model.Post) error
+}
+
+func (m *mockPostPeer) GetUserByID(id string) (*model.User, error) {
+	return m.userByIdFn(id)
 }
 
 func (m *mockPostPeer) GetPosts() ([]*model.Post, error) {
@@ -43,7 +48,7 @@ func (m *mockPostPeer) GetByID(id string) (*model.Post, error) {
 
 func TestPosts(t *testing.T) {
 	assert := assert.New(t)
-	const output = `{"data":[{"id":"id123","user_id":"uid123","message":"Message","created_at":1448272067}]}`
+	const output = `{"data":[{"id":"id123","user_id":"uid123","username":"myname","message":"Message","created_at":1448272067}]}`
 	ts := time.Unix(1448272067, 0)
 	mockModel := &mockPostPeer{
 		postsFn: func() ([]*model.Post, error) {
@@ -51,6 +56,7 @@ func TestPosts(t *testing.T) {
 				{
 					ID:        "id123",
 					UID:       "uid123",
+					Username:  "myname",
 					Message:   "Message",
 					CreatedAt: ts,
 				},
@@ -69,7 +75,7 @@ func TestPosts(t *testing.T) {
 func TestCreate(t *testing.T) {
 	assert := assert.New(t)
 	const input = `{"data":{"message":"test message"}}`
-	const output = `{"data":{"id":"id","user_id":"uid123","message":"test message","created_at":1448272067}}`
+	const output = `{"data":{"id":"id","user_id":"uid123","username":"myname","message":"test message","created_at":1448272067}}`
 	ts := time.Unix(1448272067, 0)
 	var post *model.Post
 	mockModel := &mockPostPeer{
@@ -83,6 +89,12 @@ func TestCreate(t *testing.T) {
 		saveFn: func(p *model.Post) error {
 			post = p
 			return nil
+		},
+		userByIdFn: func(id string) (*model.User, error) {
+			return &model.User{
+				ID:       id,
+				Username: "myname",
+			}, nil
 		},
 	}
 
@@ -99,6 +111,7 @@ func TestCreate(t *testing.T) {
 	assert.NotNil(post)
 	assert.Equal("id", post.ID)
 	assert.Equal("uid123", post.UID)
+	assert.Equal("myname", post.Username)
 	assert.Equal(http.StatusCreated, w.Code, "Invalid statuscode")
 	assert.Equal(output, strings.TrimSpace(w.Body.String()), "Invalid output")
 }
@@ -152,7 +165,7 @@ func TestRemove(t *testing.T) {
 		t.Fatalf("Could not create request")
 	}
 	c.Remove(ctx, w, r)
-	assert.NotNil(post)
+	assert.NotNil(post, "Post must not be nil")
 	assert.Equal("123", post.ID)
 	assert.Equal("uid123", post.UID)
 	assert.Equal(http.StatusNoContent, w.Code, "Invalid statuscode")

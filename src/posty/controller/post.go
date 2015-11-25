@@ -10,6 +10,7 @@ import (
 )
 
 type PostDataProvider interface {
+	GetUserByID(id string) (*model.User, error)
 	GetPosts() ([]*model.Post, error)
 	NewPost(uid string) *model.Post
 	SaveNew(p *model.Post) error
@@ -28,6 +29,7 @@ type postsResponse struct {
 type jsonPost struct {
 	ID        string `json:"id"`
 	UID       string `json:"user_id"`
+	Username  string `json:"username"`
 	Message   string `json:"message"`
 	CreatedAt int64  `json:"created_at"`
 }
@@ -43,6 +45,7 @@ func (p *PostController) Posts(ctx context.Context, w http.ResponseWriter, r *ht
 		jsonPosts[i] = &jsonPost{
 			ID:        p.ID,
 			UID:       p.UID,
+			Username:  p.Username,
 			Message:   p.Message,
 			CreatedAt: p.CreatedAt.Unix(),
 		}
@@ -87,8 +90,14 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 		jsonError(w, r, cErrClient, "Message too short")
 		return
 	}
+	userdata, err := p.Model.GetUserByID(user)
+	if err != nil {
+		jsonError(w, r, cErrServer, "")
+		return
+	}
 	post := p.Model.NewPost(user)
 	post.Message = req.Data.Message
+	post.Username = userdata.Username
 	err = p.Model.SaveNew(post)
 	if err != nil {
 		log.Warnf("Could not save post: %s", err)
@@ -97,6 +106,7 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 	jsonPost := &jsonPost{
 		ID:        post.ID,
 		UID:       post.UID,
+		Username:  post.Username,
 		Message:   post.Message,
 		CreatedAt: post.CreatedAt.Unix(),
 	}
