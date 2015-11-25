@@ -42,6 +42,7 @@ func TestAuthLoginGoogle(t *testing.T) {
 			return &model.User{
 				OAuthID:   oauthid,
 				ID:        "uid123",
+				Username:  "oldusername",
 				CreatedAt: ts,
 			}, nil
 		},
@@ -54,11 +55,12 @@ func TestAuthLoginGoogle(t *testing.T) {
 		Data: mock,
 	}
 
-	u, err := ac.loginUser("google:123")
+	u, err := ac.loginUser("google:123", "newusername")
 	if err != nil {
 		t.Fatalf("Error: %s", err)
 	}
 	assert.Equal("uid123", u.ID)
+	assert.Equal("oldusername", u.Username)
 	assert.Equal("uid123", updateCalled)
 	assert.Equal("google:123", u.OAuthID)
 	assert.Equal(ts.Unix(), u.CreatedAt.Unix(), "CreatedAt does not match")
@@ -92,12 +94,13 @@ func TestAuthLoginGoogleCreateUser(t *testing.T) {
 		Data: mock,
 	}
 
-	u, err := ac.loginUser("google:123")
+	u, err := ac.loginUser("google:123", "username")
 	if err != nil {
 		t.Fatalf("Error: %s", err)
 	}
 	assert.Equal("uid123", saveUser.ID)
 	assert.Equal("uid123", u.ID)
+	assert.Equal("username", u.Username)
 	assert.Equal("uid123", updateCalled)
 	assert.Equal("google:123", u.OAuthID)
 	assert.Equal(ts.Unix(), u.CreatedAt.Unix(), "CreatedAt does not match")

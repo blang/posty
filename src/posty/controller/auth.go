@@ -55,21 +55,21 @@ func (c *AuthController) Logout(loginURL string) xhandler.HandlerC {
 func (c *AuthController) Callback(successURL string) xhandler.HandlerC {
 	return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		log.Info("Handler: Callback")
-		uid, err := c.Provider.Callback(w, r)
+		user, err := c.Provider.Callback(w, r)
 
 		if err != nil {
 			log.Printf("Error occurred: %s", err)
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		if uid == nil {
+		if user == nil {
 			log.Printf("Error occurred uid is nil")
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		uuid := c.ProviderName + ":" + *uid
+		uuid := c.ProviderName + ":" + user["id"]
 
-		u, err := c.loginUser(uuid)
+		u, err := c.loginUser(uuid, user["name"])
 		if err != nil {
 			log.Warnf("Could not create new user: %s", err)
 			http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -83,11 +83,12 @@ func (c *AuthController) Callback(successURL string) xhandler.HandlerC {
 	})
 }
 
-func (c *AuthController) loginUser(uuid string) (*model.User, error) {
+func (c *AuthController) loginUser(uuid, username string) (*model.User, error) {
 	u, err := c.Data.GetByOAuthID(uuid)
 	if u == nil || err != nil {
 		u = c.Data.NewUser()
 		u.OAuthID = uuid
+		u.Username = username
 		log.Infof("User to create: %#v", u)
 		err = c.Data.SaveNew(u)
 		if err != nil {
