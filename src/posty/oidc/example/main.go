@@ -42,18 +42,18 @@ func main() {
 	}
 	http.HandleFunc("/login", client.NewAuth)
 	http.HandleFunc("/oauth2cb", func(w http.ResponseWriter, r *http.Request) {
-		uid, err := client.Callback(w, r)
+		user, err := client.Callback(w, r)
 		if err != nil {
 			log.Printf("Error occurred: %s", err)
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		if uid == nil {
+		if user == nil {
 			log.Printf("Error occurred uid is nil")
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		fmt.Fprintf(w, "Uid is: %s", *uid)
+		fmt.Fprintf(w, "User is: %#v", user)
 	})
 
 	if err := http.ListenAndServe(":8080", nil); err != nil {

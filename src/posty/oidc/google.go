@@ -28,7 +28,8 @@ func (o *Google) NewAuth(w http.ResponseWriter, r *http.Request) {
 	vals := url.Values{}
 	vals.Add("client_id", o.ClientID)
 	vals.Add("response_type", "code")
-	vals.Add("scope", "openid")
+	// Profile does allow to get the name of the user, no need to request userinfo endpoint
+	vals.Add("scope", "openid profile")
 	vals.Add("redirect_uri", o.RedirectURI)
 	vals.Add("nonce", nonce)
 	vals.Add("state", state)
@@ -44,7 +45,7 @@ func (o *Google) NewAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 // Callback handles the callback from the user after the identity provider provided a code to the users agent
-func (o *Google) Callback(w http.ResponseWriter, r *http.Request) (uid *string, err error) {
+func (o *Google) Callback(w http.ResponseWriter, r *http.Request) (user map[string]string, err error) {
 	// Delete CSRF Tokens afterwards
 	defer func() {
 		session, _ := o.SessionStore.Get(r, "goidc")
@@ -84,7 +85,7 @@ func (o *Google) Callback(w http.ResponseWriter, r *http.Request) (uid *string, 
 	c := http.Client{}
 
 	// Exchange code for token
-	req, err := http.NewRequest("POST", "https://www.googleapis.com/oauth2/v3/token", strings.NewReader(vals.Encode()))
+	req, err := http.NewRequest("POST", "https://www.googleapis.com/oauth2/v4/token", strings.NewReader(vals.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("Could not build request: %s", err)
 	}
@@ -166,12 +167,20 @@ func (o *Google) Callback(w http.ResponseWriter, r *http.Request) (uid *string, 
 			return nil, fmt.Errorf("Verification of token 'audience' failed: %v", token.Claims)
 		}
 
+		user = make(map[string]string)
+
 		// Check 'sub'
 		uid, ok := (token.Claims["sub"]).(string)
 		if !ok {
 			return nil, fmt.Errorf("Could not get a unique user id")
 		}
-		return &uid, nil
+		user["id"] = uid
+		name, ok := (token.Claims["name"]).(string)
+		if !ok {
+			return nil, fmt.Errorf("Could not get the name of the user")
+		}
+		user["name"] = name
+		return user, nil
 	} else if ve, ok := err.(*jwt.ValidationError); ok {
 		if ve.Errors&jwt.ValidationErrorMalformed != 0 {
 			return nil, fmt.Errorf("ID Token is malformed")

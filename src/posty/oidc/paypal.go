@@ -29,7 +29,7 @@ func (o *Paypal) NewAuth(w http.ResponseWriter, r *http.Request) {
 	vals := url.Values{}
 	vals.Add("client_id", o.ClientID)
 	vals.Add("response_type", "code")
-	vals.Add("scope", "openid")
+	vals.Add("scope", "openid profile")
 	vals.Add("redirect_uri", o.RedirectURI)
 	vals.Add("nonce", nonce)
 	vals.Add("state", state)
@@ -45,7 +45,7 @@ func (o *Paypal) NewAuth(w http.ResponseWriter, r *http.Request) {
 }
 
 // Callback handles the callback from the user after the identity provider provided a code to the users agent
-func (o *Paypal) Callback(w http.ResponseWriter, r *http.Request) (uid *string, err error) {
+func (o *Paypal) Callback(w http.ResponseWriter, r *http.Request) (user map[string]string, err error) {
 	// Delete CSRF Tokens afterwards
 	defer func() {
 		session, _ := o.SessionStore.Get(r, "poidc")
@@ -146,9 +146,19 @@ func (o *Paypal) Callback(w http.ResponseWriter, r *http.Request) (uid *string, 
 		return nil, fmt.Errorf("Could not decode userinfo response: %s", err)
 	}
 
+	user = make(map[string]string)
+
 	userID, ok := respUserInfo["user_id"]
 	if !ok || userID == "" {
 		return nil, fmt.Errorf("Could not find unique user identifier")
 	}
-	return &userID, nil
+	user["id"] = userID
+
+	name, ok := respUserInfo["name"]
+	if !ok || name == "" {
+		return nil, fmt.Errorf("Could not find unique user identifier")
+	}
+	user["name"] = name
+
+	return user, nil
 }
