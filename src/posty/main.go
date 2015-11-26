@@ -15,7 +15,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	gctx "github.com/gorilla/context"
 	"github.com/gorilla/securecookie"
@@ -36,8 +35,8 @@ func envOrDefault(env string, def string) string {
 
 var (
 	listen                 = flag.String("http", envOrDefault("LISTEN", ":8080"), "Listen on")
-	awsprofile             = flag.String("awsprofile", envOrDefault("AWS_PROFILE", ""), "AWS Profile using shared credential file")
 	frontendPath           = flag.String("frontend-path", envOrDefault("FRONTEND_PATH", "./frontend"), "Path to frontend")
+	dynamodbEndpoint       = flag.String("dynamodb-endpoint", envOrDefault("DYNAMODB_ENDPOINT", ""), "Dynamodb endpoint, leave blank in production, e.g. http://127.0.0.1:8000")
 	debug                  = flag.Bool("debug", false, "Enable debugging")
 	oidcGoogleClientID     = flag.String("oidc-google-client-id", envOrDefault("OIDC_GOOGLE_CLIENT_ID", ""), "Google OpenID Connect Client ID")
 	oidcGoogleClientSecret = flag.String("oidc-google-client-secret", envOrDefault("OIDC_GOOGLE_CLIENT_SECRET", ""), "Google OpenID Connect Client Secret")
@@ -126,10 +125,9 @@ func main() {
 	}
 
 	// Dynamodb
-	cfg := &aws.Config{
-		Region:      aws.String("us-west-2"),
-		Endpoint:    aws.String("http://localhost:8000"),
-		Credentials: credentials.NewSharedCredentials("", *awsprofile),
+	cfg := &aws.Config{}
+	if *dynamodbEndpoint != "" {
+		cfg.Endpoint = aws.String(*dynamodbEndpoint)
 	}
 	sess := session.New(cfg)
 	if *debug {
