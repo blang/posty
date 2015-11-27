@@ -37,13 +37,25 @@ Bootstrap is used to please the eye at least a little bit.
 - [xhandler](https://github.com/rs/xhandler): HTTP Handler wrapper using [net/context](https://godoc.org/golang.org/x/net/context). Better flexibility between different routers, uses `context` to transport `sessions` etc.
 - [goji](https://github.com/zenazn/goji): Minimalistic Webframework. Gojis http router was used for speed and support for url patterns like `/api/post/:id`.
 - [gorilla/sessions](https://github.com/gorilla/sessions)/[gorilla/securecookie](https://github.com/gorilla/securecookie): Secure Cookies (transporting the `user_id`) use HMAC and Encryption to be tamper-proof. It enables to scale the application horizontally since no session store is needed.
+- [dgrijalva/jwt](https://github.com/dgrijalva/jwt-go): JWT verfies id tokens as JSON Webtokens using available signing methods like HMAC or RSA.
 
 ## Design (Backend)
 
-### Model
+### Model (posty/model, posty/model/awsdynamo)
 The model encapsulates the data store logic of the application. It's devided in `user` and `post` since those are the stored entities.
-While the package `model`...
+While the package `model` implements the interfaces and basic types, the package `awsdynamo` is the concrete implementation backed by AWS DynamoDB.
 
+### OIDC (posty/oidc)
+Google and Paypal were chosen as Identity Providers because both implement the OpenID Connect protocol. Because of problems with the Paypal api a general oidc library like [coreos/go-oidc](https://github.com/coreos/go-oidc) were not chosen in the final implementation. Paypals ID Token uses a HMAC signature which can not be verified, because it's not signed with the users secret key. Paypal also does not support a proper "sub" Claim to identify the user without access to an userinfo endpoint.
+
+The package oidc implements a suitable oidc strategy for Google and Paypal and was completely written by our group.
+
+Session stored secrets are used to verify the `state` of the oidc session and after the id token is verified, also the nounce and the audience is checked for any tampering attempt. To verify Googles id token googles certificates are loaded from the cert endpoint.
+
+### Controllers
+
+
+### Middleware
 
 ## Build, Test and Run
 
