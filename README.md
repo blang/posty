@@ -89,6 +89,7 @@ The main package builds the foundation for the project. It's build as a [12 Fact
 ### Build using Docker
 
 Requirements:
+
 - Docker 1.7+
 
 #### Build backend
@@ -139,7 +140,9 @@ Frontend and backend can also be build without using docker:
 #### Build backend
 
 Requirements:
+
 - Go 1.4+
+
 Build using `wgo` (for vendoring):
 ```
 ## Get wgo
@@ -154,6 +157,7 @@ wgo build posty
 
 #### Build frontend
 Requirements:
+
 - Nodejs
 
 ```
@@ -171,6 +175,7 @@ Output: `./dist`
 ### Run locally
 
 Requirements:
+
 - dynamodb local running on http://127.0.0.1:8000/
 - local golang dev environment
 - built `./posty`
