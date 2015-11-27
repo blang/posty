@@ -1,9 +1,12 @@
 # Posty - Project 1
 
 ## Project
+
 Group: Group01
+
 Projectname: Posty
-Groupmembers: Benedikt Lang
+
+Groupmembers: Benedikt Lang <mail at blang.io>
 
 ## Software, Tools, Libs
 
@@ -14,8 +17,9 @@ Golang was developed by google engineers to build large long-running systems and
 The benefits:
 
 * Most code is more concise than in `java` 
-* Lowlevel oauth2/oidc implementation possible (see later)
-* Single binary deployment
+* Lowlevel oauth2/oidc implementation more easy to implement (see later)
+* Single binary deployment, Fast compilation, Dependency management
+* Clear Codestyle and Docs
 
 ### WGO (Go Workspaces)
 [wgo](https://github.com/skelterjohn/wgo) is a small wrapper around the `go` toolchain to enable a standalone workspace with fixed dependencies. Therefore `posty` is build using `wgo build posty` instead of `go build posty`.
@@ -23,7 +27,7 @@ The benefits:
 ### Docker
 The `EBS` Deployment uses docker, because it fits the picture and give greater flexibility. The project is build to one static binary (posty backend) and the frontend directory (html, javascript,..).
 
-Since `EBS` supports native golang deployments, this would be possible too but it's more complicated to build the binary using the fixed dependencies (see later).
+Since `EBS` supports native golang deployments, this would be possible too but it's more complicated to build the binary using the fixed dependencies bundled by wgo.
 
 For convenience everthing can be build using docker, no need to install a `node.js` or `golang` environment (see later).
 
@@ -37,25 +41,42 @@ Bootstrap is used to please the eye at least a little bit.
 - [xhandler](https://github.com/rs/xhandler): HTTP Handler wrapper using [net/context](https://godoc.org/golang.org/x/net/context). Better flexibility between different routers, uses `context` to transport `sessions` etc.
 - [goji](https://github.com/zenazn/goji): Minimalistic Webframework. Gojis http router was used for speed and support for url patterns like `/api/post/:id`.
 - [gorilla/sessions](https://github.com/gorilla/sessions)/[gorilla/securecookie](https://github.com/gorilla/securecookie): Secure Cookies (transporting the `user_id`) use HMAC and Encryption to be tamper-proof. It enables to scale the application horizontally since no session store is needed.
-- [dgrijalva/jwt](https://github.com/dgrijalva/jwt-go): JWT verfies id tokens as JSON Webtokens using available signing methods like HMAC or RSA.
+- [dgrijalva/jwt](https://github.com/dgrijalva/jwt-go): JWT parses and verifies id tokens as JSON Webtokens using available signing methods like HMAC or RSA.
 
 ## Design (Backend)
 
 ### Model (posty/model, posty/model/awsdynamo)
-The model encapsulates the data store logic of the application. It's devided in `user` and `post` since those are the stored entities.
-While the package `model` implements the interfaces and basic types, the package `awsdynamo` is the concrete implementation backed by AWS DynamoDB.
+The model encapsulates the data store logic of the application. It's divided in two packages `user` and `post`, since those are the stored entities.
+
+While the package `model` implements the interfaces and basic types, the package `awsdynamo` is the concrete implementation backed by AWS DynamoDB including integration tests.
 
 ### OIDC (posty/oidc)
-Google and Paypal were chosen as Identity Providers because both implement the OpenID Connect protocol. Because of problems with the Paypal api a general oidc library like [coreos/go-oidc](https://github.com/coreos/go-oidc) were not chosen in the final implementation. Paypals ID Token uses a HMAC signature which can not be verified, because it's not signed with the users secret key. Paypal also does not support a proper "sub" Claim to identify the user without access to an userinfo endpoint.
+Google and Paypal were chosen as Identity Providers because both implement the OpenID Connect protocol (at least partly).
 
-The package oidc implements a suitable oidc strategy for Google and Paypal and was completely written by our group.
+Because of problems with the Paypal API a general oidc library like [coreos/go-oidc](https://github.com/coreos/go-oidc) were not chosen in the final implementation: Paypals ID Token use a HMAC signature which can not be verified, because it's not signed with the users secret key. Paypal also does not support a proper "sub" Claim to identify the user without accessing to an userinfo endpoint.
+
+The package oidc implements a suitable oidc strategy for Google and Paypal and was completely build by hand. `jwt-go` provides the necessary functionality to parse and verify the `id_token`. 
 
 Session stored secrets are used to verify the `state` of the oidc session and after the id token is verified, also the nounce and the audience is checked for any tampering attempt. To verify Googles id token googles certificates are loaded from the cert endpoint.
 
 ### Controllers
+The `controller` package consists of two important types `PostController` and `AuthController`. `AuthController` handles the process of logging in using OIDC and the registration of new users. 
 
+The `PostController` provides a REST API to create, delete and list posts.
+
+Both controllers are connected with the model using flexible interfaces.
 
 ### Middleware
+Middleware is called in a chain before the http handler and provides necessary context. The `auth` middleware has two variants: 
+
+The `UnauthenticatedFilter` only allows logged-out users to reach the http handler, logged-in users are redirected. `AuthenticatedFilter` provides the exact opposite.
+
+Both filters provide a flexible handling of the routes.
+
+The `session` middleware handles the cookie managment. All session data is stored in cookies encrypted and hashed using the `securecookie` library. Using this approach, it's possible to scale horizontally without the need for a seperate session database.
+
+### Main
+The main package builds the foundation for the project. It's build as a [12 Factor Application](http://12factor.net/), which means it's completely configured using commandline flags and/or environment variables. This has a big advantage in deployment, since a seperate configuration can be supplied for development and production using the environment, like in Amazon Elastic Beanstalk.
 
 ## Build, Test and Run
 
@@ -96,7 +117,18 @@ Now you can build a production ready container:
 ```
 This will create the container: `blang/posty-staging`
 
+### Build Elastic Beanstalk zip
+
+You can create a valid zip file for Elastic bean stalk:
+
+```
+./build/staging/create_ebs_zip.sh
+```
+This will create `posty-staging.zip`.
+
+
 ### Build manually
+Frontend and backend can also be build without using docker:
 
 #### Build backend
 
@@ -130,15 +162,6 @@ grunt build
 ```
 Output: `./dist`
 
-### Build Elastic Beanstalk zip
-
-You can create a valid zip file for Elastic bean stalk:
-
-```
-./build/staging/create_ebs_zip.sh
-```
-This will create `posty-staging.zip`.
-
 ### Run locally
 
 Requirements:
@@ -171,4 +194,5 @@ Run Posty:
 ./posty -frontend-path "./frontend/dist"
 ```
 
+All configuration is done by commandline flags or environment variables beginning with `POSTY_`. Have a look at `./posty --help` for more information.
 
