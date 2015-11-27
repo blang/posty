@@ -8,6 +8,12 @@ Projectname: Posty
 
 Groupmembers: Benedikt Lang <mail at blang.io>
 
+## Hosting
+
+Hosted on AWS Elastic Bean Stalk: [https://posty.elasticbeanstalk.com/](https://posty.elasticbeanstalk.com/)
+
+Root CA: `./rootCA.pem`
+
 ## Software, Tools, Libs
 
 ### Golang
