@@ -84,13 +84,26 @@ The `session` middleware handles the cookie managment. All session data is store
 ### Main
 The main package builds the foundation for the project. It's build as a [12 Factor Application](http://12factor.net/), which means it's completely configured using commandline flags and/or environment variables. This has a big advantage in deployment, since a seperate configuration can be supplied for development and production using the environment, like in Amazon Elastic Beanstalk.
 
+### Documentation
+The code docs can be viewed using `godoc` in your webbrowser and is highly recommended (see below).
+
 ## Build, Test and Run
 
-### Build using Docker
+### Build using Docker (recommended)
 
 Requirements:
 
 - Docker 1.7+
+
+#### View Godocs
+```
+# Pull docker container
+docker pull blang/posty-build-backend
+# Exec godocs (127.0.0.1:6060)
+./build/backend/godocs.sh
+```
+
+See [http://127.0.0.1:6060/pkg/posty/](http://127.0.0.1:6060/pkg/posty/) for GoDocs.
 
 #### Build backend
 ```
@@ -143,6 +156,22 @@ This will create `posty-staging.zip`.
 ### Build manually
 Frontend and backend can also be build without using docker:
 
+#### View Godocs
+
+Requirements:
+
+- Go 1.4+
+```
+## Get wgo
+go get github.com/skelterjohn/wgo
+
+## Restore dependencies
+wgo restore
+
+GOPATH=$(wgo env GOPATH) godoc -http ':6060'
+```
+
+See [http://127.0.0.1:6060/pkg/posty/](http://127.0.0.1:6060/pkg/posty/) for GoDocs.
 #### Build backend
 
 Requirements:
