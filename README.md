@@ -191,11 +191,12 @@ Frontend and backend can also be build without using docker:
 Requirements:
 
 - Go 1.4+
+
 ```
-## Get wgo
+# Get wgo
 go get github.com/skelterjohn/wgo
 
-## Restore dependencies
+# Restore dependencies
 wgo restore
 
 GOPATH=$(wgo env GOPATH) godoc -http ':6060'
@@ -210,14 +211,15 @@ Requirements:
 - Go 1.4+
 
 Build using `wgo` (for vendoring):
+
 ```
-## Get wgo
+# Get wgo
 go get github.com/skelterjohn/wgo
 
-## Restore dependencies
+# Restore dependencies
 wgo restore
 
-## Build
+# Build
 wgo build posty
 ```
 
@@ -231,15 +233,16 @@ cd frontend
 
 npm install -g grunt-cli bower
 
-## Install local dependencies
+# Install local dependencies
 npm install
 
-## Bower install
+# Bower install
 bower install
 
-## Build
+# Build
 grunt build
 ```
+
 Output: `./dist`
 
 ### Run locally
@@ -251,13 +254,14 @@ Requirements:
 - built `./posty`
 
 Setup a development environment for the 12-factor app:
+
 ```
 export POSTY_OIDC_GOOGLE_CLIENT_ID=[YOUR DATA HERE]
 export POSTY_OIDC_GOOGLE_CLIENT_SECRET=[YOUR DATA HERE]
 export POSTY_OIDC_PAYPAL_CLIENT_ID=[YOUR DATA HERE]
 export POSTY_OIDC_PAYPAL_CLIENT_SECRET=[YOUR DATA HERE]
 export POSTY_DYNAMODB_ENDPOINT=http://127.0.0.1:8000/
-## Setup aws credentials or use ~/.aws credentials
+# Setup aws credentials or use ~/.aws credentials
 export AWS_REGION=us-west-2
 export AWS_ENDPOINT=http://127.0.0.1:8000/
 export AWS_PROFILE=dev
@@ -266,11 +270,13 @@ export AWS_SECRET_ACCESS_KEY=dev
 ```
 
 Run the integration tests. This will create the dynamodb tables `user` and `post` needed.
+
 ```
 wgo test posty/model/awsdynamo/integrationtest -test.v -integration
 ```
 
 Run Posty:
+
 ```
 ./posty -frontend-path "./frontend/dist"
 ```
