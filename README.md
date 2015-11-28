@@ -49,7 +49,27 @@ Bootstrap is used to please the eye at least a little bit.
 - [gorilla/sessions](https://github.com/gorilla/sessions)/[gorilla/securecookie](https://github.com/gorilla/securecookie): Secure Cookies (transporting the `user_id`) use HMAC and Encryption to be tamper-proof. It enables to scale the application horizontally since no session store is needed.
 - [dgrijalva/jwt](https://github.com/dgrijalva/jwt-go): JWT parses and verifies id tokens as JSON Webtokens using available signing methods like HMAC or RSA.
 
-## Design (Backend)
+## Design
+
+###Workflow
+
+- User visits `/` (gets redirected to `/login`)
+- User chooses identify provider (Google or Paypal) and gets redirected to '/logingoogle` or `/loginpaypal`)
+- Backend generates random state and nonce used for oidc. Redirects to provider with oidc clientid, state, scope...
+- User gets redirected to provider
+- User logs in on provider
+- User gets redirected to callback endpoint: `/gcallback` (google) or `/pcallback` (paypal)
+- Backend handles session creation, user is created if not already in database.
+- User is redirected to board page `/`
+- Posts are listed on page: Frontend calls `GET /api/posts` (with session cookie)
+- Backend authenticates user based on session cookie (on every `/api/` call and returns result set from database.
+- User posts something: Frontend handles REST Call: `POST /api/posts` `{"data":{"message":"my posting"}}`
+- Backend responds with `201  Created` and responds with created post.
+- User deletes post: Frontend handles REST Call: `DELETE /api/posts/423e7b0a-efcd-4eb4-9704-791f681507fa`
+- If User is not authorized, API responded with Status 401, Error message is shown
+- Backend responds with `204 No content` on success.
+- User logs out: `/logout`. Session is invalidated by backend.
+- User gets redirected to `/login`
 
 ### Model (posty/model, posty/model/awsdynamo)
 The model encapsulates the data store logic of the application. It's divided in two packages `user` and `post`, since those are the stored entities.
@@ -64,6 +84,8 @@ Because of problems with the Paypal API a general oidc library like [coreos/go-o
 The package oidc implements a suitable oidc strategy for Google and Paypal and was completely build by hand. `jwt-go` provides the necessary functionality to parse and verify the `id_token`.
 
 Session stored secrets are used to verify the `state` of the oidc session and after the id token is verified, also the nounce and the audience is checked for any tampering attempt. To verify Googles id token googles certificates are loaded from the cert endpoint.
+
+The paypal oidc is configured to work on the paypal sandbox for demostration purpose, this ensures better options for the demo (multiple accounts). Replacing the 3 oidc urls inside `oidc/paypal.go` from `sandbox.paypal.com` to `api.paypal.com` will work in production. No further changes are needed.
 
 ### Controllers
 The `controller` package consists of two important types `PostController` and `AuthController`. `AuthController` handles the process of logging in using OIDC and the registration of new users.
@@ -86,6 +108,14 @@ The main package builds the foundation for the project. It's build as a [12 Fact
 
 ### Documentation
 The code docs can be viewed using `godoc` in your webbrowser and is highly recommended (see below).
+
+## Frontend
+The frontend is a very simple angularjs application.
+
+It provides REST API calls and renders the result.
+
+For user convenience it is possible to filter all posts using the filter field. The posts are filtered (all fields) as the user types.
+
 
 ## Build, Test and Run
 
