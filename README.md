@@ -6,7 +6,7 @@ Group: Group01
 
 Projectname: Posty
 
-Groupmembers: Benedikt Lang <mail at blang.io>
+Groupmembers: Benedikt Lang (mail at blang.io)
 
 ## Hosting
 
