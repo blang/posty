@@ -42,7 +42,7 @@ A proper REST API needs a suitable consumer. AngularJS is a good choice to build
 
 Bootstrap is used to please the eye at least a little bit.
 
-#### Important libraries (Backend)
+## Important libraries (Backend)
 
 - [xhandler](https://github.com/rs/xhandler): HTTP Handler wrapper using [net/context](https://godoc.org/golang.org/x/net/context). Better flexibility between different routers, uses `context` to transport `sessions` etc.
 - [goji](https://github.com/zenazn/goji): Minimalistic Webframework. Gojis http router was used for speed and support for url patterns like `/api/post/:id`.
@@ -120,18 +120,18 @@ Output: `./posty` binary
 #### Build frontend
 ```
 # Pull docker container
-docker pull blang/posty-build-backend
+docker pull blang/posty-build-frontend
 # OR build container locally
-./build/backend/buildcontainer.sh
+./build/frontend/buildcontainer.sh
 
-# Build ./posty using container
-./build/backend/build.sh
+# Build ./frontend/dist directory using container
+./build/frontend/build.sh
 ```
 Output: `./frontend/dist`
 
 #### Build staging
 
-After you build the backend and the frontend, the following structure should be present:
+After you built the backend and the frontend, the following structure should be present:
 
 - ./posty (go binary)
 - ./frontend/dist (frontend files)
@@ -172,6 +172,7 @@ GOPATH=$(wgo env GOPATH) godoc -http ':6060'
 ```
 
 See [http://127.0.0.1:6060/pkg/posty/](http://127.0.0.1:6060/pkg/posty/) for GoDocs.
+
 #### Build backend
 
 Requirements:
@@ -197,10 +198,14 @@ Requirements:
 
 ```
 cd frontend
+
 npm install -g grunt-cli bower
 
 ## Install local dependencies
 npm install
+
+## Bower install
+bower install
 
 ## Build
 grunt build
