@@ -8,17 +8,9 @@
       "URI": "https://github.com/aws/aws-sdk-go",
       "Ref": "ce51895e994693d65ab997ae48032bf13a9290b7"
     },
-    "vendor/src/github.com/coreos/go-oidc": {
-      "URI": "https://github.com/coreos/go-oidc",
-      "Ref": "5d3ac76573da4d1e3254d3748217bdf89154c667"
-    },
-    "vendor/src/github.com/coreos/go-systemd": {
-      "URI": "https://github.com/coreos/go-systemd",
-      "Ref": "b4a58d95188dd092ae20072bac14cece0e67c388"
-    },
-    "vendor/src/github.com/coreos/pkg": {
-      "URI": "https://github.com/coreos/pkg",
-      "Ref": "2c77715c4df99b5420ffcae14ead08f52104065d"
+    "vendor/src/github.com/davecgh/go-spew": {
+      "URI": "https://github.com/davecgh/go-spew",
+      "Ref": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d"
     },
     "vendor/src/github.com/dgrijalva/jwt-go": {
       "URI": "https://github.com/dgrijalva/jwt-go",
@@ -27,10 +19,6 @@
     "vendor/src/github.com/go-ini/ini": {
       "URI": "https://github.com/go-ini/ini",
       "Ref": "060d7da055ba6ec5ea7a31f116332fe5efa04ce0"
-    },
-    "vendor/src/github.com/godbus/dbus": {
-      "URI": "https://github.com/godbus/dbus",
-      "Ref": "c7fdd8b5cd55e87b4e1f4e372cdb1db61dd6c66f"
     },
     "vendor/src/github.com/gorilla/context": {
       "URI": "https://github.com/gorilla/context",
@@ -48,13 +36,9 @@
       "URI": "https://github.com/jmespath/go-jmespath",
       "Ref": "3433f3ea46d9f8019119e7dd41274e112a2359a9"
     },
-    "vendor/src/github.com/jonboulle/clockwork": {
-      "URI": "https://github.com/jonboulle/clockwork",
-      "Ref": "fad208dd89dbc316a149043e332a192477f0e2a2"
-    },
-    "vendor/src/github.com/jtolds/gls": {
-      "URI": "https://github.com/jtolds/gls",
-      "Ref": "9a4a02dbe491bef4bab3c24fd9f3087d6c4c6690"
+    "vendor/src/github.com/pmezard/go-difflib": {
+      "URI": "https://github.com/pmezard/go-difflib",
+      "Ref": "d8ed2627bdf02c080bf22230dbb337003b7aba2d"
     },
     "vendor/src/github.com/rs/xhandler": {
       "URI": "https://github.com/rs/xhandler",
@@ -64,9 +48,9 @@
       "URI": "https://github.com/satori/go.uuid",
       "Ref": "d41af8bb6a7704f00bc3b7cba9355ae6a5a80048"
     },
-    "vendor/src/github.com/smartystreets/assertions": {
-      "URI": "https://github.com/smartystreets/assertions",
-      "Ref": "6427400a39401722b896971821c0d69f8a31818f"
+    "vendor/src/github.com/stretchr/testify": {
+      "URI": "https://github.com/stretchr/testify",
+      "Ref": "d797d25e0fa6d53be3b1a216d24e868d6a1912ef"
     },
     "vendor/src/github.com/zenazn/goji": {
       "URI": "https://github.com/zenazn/goji",
@@ -75,10 +59,6 @@
     "vendor/src/golang.org/x/net": {
       "URI": "https://go.googlesource.com/net",
       "Ref": "c764672d0ee39ffd83cfcb375804d3181302b62b"
-    },
-    "vendor/src/gopkg.in/yaml.v1": {
-      "URI": "https://gopkg.in/yaml.v1",
-      "Ref": "9f9df34309c04878acc86042b16630b0f696e1de"
     }
   },
   "MercurialRepos": {}
