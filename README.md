@@ -18,11 +18,11 @@ Root CA: `./rootCA.pem`
 
 ### Golang
 The original suggestion was to use `java` but Prof. Reiser agreed on an approach in `Go`.
-Golang was developed by google engineers to build large long-running systems and is especially suited for webservices. 
+Golang was developed by google engineers to build large long-running systems and is especially suited for webservices.
 
 The benefits:
 
-* Most code is more concise than in `java` 
+* Most code is more concise than in `java`
 * Lowlevel oauth2/oidc implementation more easy to implement (see later)
 * Single binary deployment, Fast compilation, Dependency management
 * Clear Codestyle and Docs
@@ -61,19 +61,19 @@ Google and Paypal were chosen as Identity Providers because both implement the O
 
 Because of problems with the Paypal API a general oidc library like [coreos/go-oidc](https://github.com/coreos/go-oidc) were not chosen in the final implementation: Paypals ID Token use a HMAC signature which can not be verified, because it's not signed with the users secret key. Paypal also does not support a proper "sub" Claim to identify the user without accessing to an userinfo endpoint.
 
-The package oidc implements a suitable oidc strategy for Google and Paypal and was completely build by hand. `jwt-go` provides the necessary functionality to parse and verify the `id_token`. 
+The package oidc implements a suitable oidc strategy for Google and Paypal and was completely build by hand. `jwt-go` provides the necessary functionality to parse and verify the `id_token`.
 
 Session stored secrets are used to verify the `state` of the oidc session and after the id token is verified, also the nounce and the audience is checked for any tampering attempt. To verify Googles id token googles certificates are loaded from the cert endpoint.
 
 ### Controllers
-The `controller` package consists of two important types `PostController` and `AuthController`. `AuthController` handles the process of logging in using OIDC and the registration of new users. 
+The `controller` package consists of two important types `PostController` and `AuthController`. `AuthController` handles the process of logging in using OIDC and the registration of new users.
 
 The `PostController` provides a REST API to create, delete and list posts.
 
 Both controllers are connected with the model using flexible interfaces.
 
 ### Middleware
-Middleware is called in a chain before the http handler and provides necessary context. The `auth` middleware has two variants: 
+Middleware is called before the actual http handler and provides necessary context. The `auth` middleware has two variants:
 
 The `UnauthenticatedFilter` only allows logged-out users to reach the http handler, logged-in users are redirected. `AuthenticatedFilter` provides the exact opposite.
 
@@ -97,7 +97,7 @@ Requirements:
 # Build container for builds
 ./build/backend/buildcontainer.sh
 # Build ./posty using container
-./build/backend/build.sh 
+./build/backend/build.sh
 ```
 Output: `./posty` binary
 
@@ -106,7 +106,7 @@ Output: `./posty` binary
 # Build container for builds
 ./build/backend/buildcontainer.sh
 # Build ./posty using container
-./build/backend/build.sh 
+./build/backend/build.sh
 ```
 Output: `./frontend/dist`
 
@@ -149,7 +149,7 @@ Build using `wgo` (for vendoring):
 go get github.com/skelterjohn/wgo
 
 ## Restore dependencies
-wgo restore 
+wgo restore
 
 ## Build
 wgo build posty

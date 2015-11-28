@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// JSONWrapper sets the content-type of the response to json.
 func JSONWrapper() func(next xhandler.HandlerC) xhandler.HandlerC {
 	return func(next xhandler.HandlerC) xhandler.HandlerC {
 		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {

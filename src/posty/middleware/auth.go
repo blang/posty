@@ -9,7 +9,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-func AuthenticatedFilter(loginUrl string) func(next xhandler.HandlerC) xhandler.HandlerC {
+// AuthenticatedFilter filters logged in users. Users with an invalid session are redirected to the loginURL.
+func AuthenticatedFilter(loginURL string) func(next xhandler.HandlerC) xhandler.HandlerC {
 	return func(next xhandler.HandlerC) xhandler.HandlerC {
 		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			session, ok := ctx.Value("session").(*sessions.Session)
@@ -20,7 +21,7 @@ func AuthenticatedFilter(loginUrl string) func(next xhandler.HandlerC) xhandler.
 			}
 			if _, ok := session.Values["user"]; !ok {
 				log.Info("Handler: Is not loggedin")
-				http.Redirect(w, r, loginUrl, http.StatusFound)
+				http.Redirect(w, r, loginURL, http.StatusFound)
 				return
 			}
 			next.ServeHTTPC(ctx, w, r)
@@ -28,7 +29,8 @@ func AuthenticatedFilter(loginUrl string) func(next xhandler.HandlerC) xhandler.
 	}
 }
 
-func UnauthenticatedFilter(loggedInUrl string) func(next xhandler.HandlerC) xhandler.HandlerC {
+// UnauthenticatedFilter filters not-logged in users. Users with a valid session are redirected to the loggedInURL.
+func UnauthenticatedFilter(loggedInURL string) func(next xhandler.HandlerC) xhandler.HandlerC {
 	return func(next xhandler.HandlerC) xhandler.HandlerC {
 		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 			session, ok := ctx.Value("session").(*sessions.Session)
@@ -39,7 +41,7 @@ func UnauthenticatedFilter(loggedInUrl string) func(next xhandler.HandlerC) xhan
 			}
 			if _, ok := session.Values["user"]; ok {
 				log.Info("Handler: Is loggedin")
-				http.Redirect(w, r, loggedInUrl, http.StatusFound)
+				http.Redirect(w, r, loggedInURL, http.StatusFound)
 				return
 			}
 			next.ServeHTTPC(ctx, w, r)
@@ -47,6 +49,7 @@ func UnauthenticatedFilter(loggedInUrl string) func(next xhandler.HandlerC) xhan
 	}
 }
 
+// UserContext adds the users session data to the handler context.
 func UserContext() func(next xhandler.HandlerC) xhandler.HandlerC {
 	return func(next xhandler.HandlerC) xhandler.HandlerC {
 		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {

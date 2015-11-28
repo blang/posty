@@ -9,14 +9,17 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Session middleware manages sessions
 type Session struct {
 	store sessions.Store
 }
 
+// Init creates a new session store
 func (m *Session) Init(hashKey, blockKey []byte) {
 	m.store = sessions.NewCookieStore(hashKey, blockKey)
 }
 
+// Enable enables session management. It creates a new session if none exists. Session is stored to the context as `session`.
 func (m *Session) Enable(name string) func(next xhandler.HandlerC) xhandler.HandlerC {
 	return func(next xhandler.HandlerC) xhandler.HandlerC {
 		return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {

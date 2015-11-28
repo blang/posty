@@ -1,8 +1,8 @@
+// Package main bundles all posty functionality in a 12factor application
 package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	filepath "path"
@@ -209,20 +209,6 @@ func handle(ctx context.Context, handlerc xhandler.HandlerC) web.Handler {
 	return web.HandlerFunc(func(c web.C, w http.ResponseWriter, r *http.Request) {
 		newctx := context.WithValue(ctx, "urlparams", c.URLParams)
 		handlerc.ServeHTTPC(newctx, w, r)
-	})
-}
-
-func Index() xhandler.HandlerC {
-	return xhandler.HandlerFuncC(func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-		params := ctx.Value("urlparams").(map[string]string)
-		name := params["name"]
-		select {
-		case <-time.After(100 * time.Millisecond):
-		case <-ctx.Done():
-			http.Error(w, "Timeout", 400)
-			return
-		}
-		fmt.Fprintf(w, "Welcome! %s\n", name)
 	})
 }
 

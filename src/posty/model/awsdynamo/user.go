@@ -21,10 +21,12 @@ func init() {
 	})
 }
 
+// DynamoUserPeer defines interaction with the post data backed by dynamodb.
 type DynamoUserPeer struct {
 	model *DynamoModel
 }
 
+// GetByID fetches a single user identified by the unique id. Otherwise an error is returned.
 func (p *DynamoUserPeer) GetByID(ID string) (*model.User, error) {
 	params := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
@@ -51,6 +53,7 @@ func (p *DynamoUserPeer) GetByID(ID string) (*model.User, error) {
 	return u, nil
 }
 
+// GetByOAuthID returns a single user identified by the oauth id. Otherwise an error is returned.
 func (p *DynamoUserPeer) GetByOAuthID(ID string) (*model.User, error) {
 	params := &dynamodb.QueryInput{
 		TableName:              aws.String("user"),
@@ -83,6 +86,7 @@ func (p *DynamoUserPeer) GetByOAuthID(ID string) (*model.User, error) {
 	return u, nil
 }
 
+// marshalUser buils an aws.AttributeValue data structure for the given user.
 func marshalUser(u *model.User, items map[string]*dynamodb.AttributeValue) error {
 	if u == nil {
 		return errors.New("Undefined user")
@@ -100,6 +104,8 @@ func marshalUser(u *model.User, items map[string]*dynamodb.AttributeValue) error
 
 	return nil
 }
+
+// unmarshalUser builds an user object from the given aws dataset.
 func unmarshalUser(u *model.User, items map[string]*dynamodb.AttributeValue) error {
 	if u == nil {
 		return errors.New("Undefined user")
@@ -147,6 +153,7 @@ func unmarshalUser(u *model.User, items map[string]*dynamodb.AttributeValue) err
 	return nil
 }
 
+// NewUser creates a new user. The object is not saved to the database.
 func (p *DynamoUserPeer) NewUser() *model.User {
 	return &model.User{
 		Peer:      p,
@@ -155,7 +162,7 @@ func (p *DynamoUserPeer) NewUser() *model.User {
 	}
 }
 
-// TODO: Check if uuid or oauthid already exists
+// SaveNew saves a newly created user to the database.
 func (p *DynamoUserPeer) SaveNew(u *model.User) error {
 	if u == nil {
 		return errors.New("User is nil")
@@ -178,6 +185,7 @@ func (p *DynamoUserPeer) SaveNew(u *model.User) error {
 	return nil
 }
 
+// UpdateLastLogin updates the timestamp of the last login of the user identified by the given user id.
 func (p *DynamoUserPeer) UpdateLastLogin(id string) error {
 	params := &dynamodb.UpdateItemInput{
 		TableName: aws.String("user"),

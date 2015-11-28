@@ -8,14 +8,17 @@ import (
 )
 
 const (
+	//cErrClient indicates a client error
 	cErrClient int = http.StatusBadRequest
-	cErrServer     = http.StatusInternalServerError
+	// cErrServer indicates a server error
+	cErrServer = http.StatusInternalServerError
 )
 
 type errorResponse struct {
 	Errors []controllerError `json:"errors"`
 }
 
+// jsonError writes a json error object with a message and status code to the the responsewriter.
 func jsonError(w http.ResponseWriter, r *http.Request, code int, msg string) {
 	log.Warnf("JSON Error: %d %s", code, msg)
 

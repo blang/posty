@@ -9,6 +9,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// PostDataProvider defines the needed model interactions.
 type PostDataProvider interface {
 	GetUserByID(id string) (*model.User, error)
 	GetPosts() ([]*model.Post, error)
@@ -18,6 +19,7 @@ type PostDataProvider interface {
 	Remove(p *model.Post) error
 }
 
+// PostController handles post related requests.
 type PostController struct {
 	Model PostDataProvider
 }
@@ -34,6 +36,7 @@ type jsonPost struct {
 	CreatedAt int64  `json:"created_at"`
 }
 
+// Posts gets all posts from the database and returns valid json, otherwise a json error.
 func (p *PostController) Posts(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	ps, err := p.Model.GetPosts()
 	if err != nil {
@@ -71,6 +74,13 @@ type postCreateResp struct {
 	Data *jsonPost `json:"data"`
 }
 
+// Create handles a request to create a new post.
+//
+// Example request: `{"data":{"message":"test message"}}`
+//
+// It checks for a non empty message with a length of at least 6 characters.
+// On success it inserts an new post into the model and returns the created object as json with status code `http.StatusCreated`.
+// Otherwise a json error is returned.
 func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	user, ok := ctx.Value("user").(string)
 	if !ok {
@@ -122,6 +132,12 @@ func (p *PostController) Create(ctx context.Context, w http.ResponseWriter, r *h
 	}
 }
 
+// Remove handles post remove requests and removes the post from the model if the user id matches the logged in user.
+// The post id is defined as an url parameter.
+//
+// On success an empty response with status http.StatusNoContent is written.
+// If the post identified by the id could not be found http.StatusNotFound is returned.
+// If the user id does not match http.StatusUnauthorized is returned.
 func (p *PostController) Remove(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	user, ok := ctx.Value("user").(string)
 	if !ok {

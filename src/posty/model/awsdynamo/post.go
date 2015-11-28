@@ -21,10 +21,12 @@ func init() {
 	})
 }
 
+// DynamoPostPeer defines interaction with the post data backed by dynamodb.
 type DynamoPostPeer struct {
 	model *DynamoModel
 }
 
+// GetByID fetches the post identified by the id primary hash key. Otherwise an error is returned.
 func (pp *DynamoPostPeer) GetByID(id string) (*model.Post, error) {
 	params := &dynamodb.QueryInput{
 		TableName:              aws.String("post"),
@@ -76,6 +78,7 @@ func (pp *DynamoPostPeer) GetByID(id string) (*model.Post, error) {
 	return p, nil
 }
 
+// NewPost creates a new post associated with a given user id. The post is not inserted into the database until it is saved.
 func (pp *DynamoPostPeer) NewPost(uid string) *model.Post {
 	return &model.Post{
 		Peer:      pp,
@@ -85,6 +88,7 @@ func (pp *DynamoPostPeer) NewPost(uid string) *model.Post {
 	}
 }
 
+// SaveNew saves a newly created post to the database. It is not permitted to save a post already existing in the database.
 func (pp *DynamoPostPeer) SaveNew(p *model.Post) error {
 	if p == nil {
 		return errors.New("Post is nil")
@@ -110,6 +114,7 @@ func (pp *DynamoPostPeer) SaveNew(p *model.Post) error {
 	return nil
 }
 
+// Remove deletes a post from the database. The implementation choses a valid identification of the post given by the data.
 func (pp *DynamoPostPeer) Remove(p *model.Post) error {
 	params := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
@@ -128,6 +133,8 @@ func (pp *DynamoPostPeer) Remove(p *model.Post) error {
 	}
 	return nil
 }
+
+// getposts queries all posts from the database using Exclusive start key for pagination. If an error occurred in those iterations no result set is returned.
 func (pp *DynamoPostPeer) getPosts(lastKey map[string]*dynamodb.AttributeValue) ([]*model.Post, error) {
 	params := &dynamodb.QueryInput{
 		TableName:              aws.String("post"),
@@ -169,10 +176,13 @@ func (pp *DynamoPostPeer) getPosts(lastKey map[string]*dynamodb.AttributeValue) 
 	}
 	return posts, nil
 }
+
+// GetPosts returns all posts from the database.
 func (pp *DynamoPostPeer) GetPosts() ([]*model.Post, error) {
 	return pp.getPosts(nil)
 }
 
+// unmarshalPost unmarshals a post from the aws datastructure to `model.Post`.
 func unmarshalPost(p *model.Post, items map[string]*dynamodb.AttributeValue) error {
 	if p == nil {
 		return errors.New("Undefined post")
@@ -210,6 +220,7 @@ func unmarshalPost(p *model.Post, items map[string]*dynamodb.AttributeValue) err
 	return nil
 }
 
+// marshalPost builds an aws AttributeValue data structure for the given post.
 func marshalPost(p *model.Post, items map[string]*dynamodb.AttributeValue) error {
 	if p == nil {
 		return errors.New("Undefined post")

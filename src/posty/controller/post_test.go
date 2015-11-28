@@ -14,7 +14,7 @@ import (
 )
 
 type mockPostPeer struct {
-	userByIdFn func(id string) (*model.User, error)
+	userByIDFn func(id string) (*model.User, error)
 	postsFn    func() ([]*model.Post, error)
 	newFn      func(uid string) *model.Post
 	saveFn     func(p *model.Post) error
@@ -23,7 +23,7 @@ type mockPostPeer struct {
 }
 
 func (m *mockPostPeer) GetUserByID(id string) (*model.User, error) {
-	return m.userByIdFn(id)
+	return m.userByIDFn(id)
 }
 
 func (m *mockPostPeer) GetPosts() ([]*model.Post, error) {
@@ -90,7 +90,7 @@ func TestCreate(t *testing.T) {
 			post = p
 			return nil
 		},
-		userByIdFn: func(id string) (*model.User, error) {
+		userByIDFn: func(id string) (*model.User, error) {
 			return &model.User{
 				ID:       id,
 				Username: "myname",
@@ -119,7 +119,7 @@ func TestCreate(t *testing.T) {
 func TestCreateInvalidJson(t *testing.T) {
 	assert := assert.New(t)
 	const input = `{"data":{"invalid":"test"}}`
-	const output_partial = `{"errors":[{`
+	const outputPartial = `{"errors":[{`
 	mockModel := &mockPostPeer{}
 
 	c := &PostController{
@@ -133,7 +133,7 @@ func TestCreateInvalidJson(t *testing.T) {
 	}
 	c.Create(ctx, w, r)
 	assert.Equal(http.StatusBadRequest, w.Code, "Invalid statuscode")
-	assert.True(strings.Contains(strings.TrimSpace(w.Body.String()), output_partial), fmt.Sprintf("Invalid output: %s", w.Body.String()))
+	assert.True(strings.Contains(strings.TrimSpace(w.Body.String()), outputPartial), fmt.Sprintf("Invalid output: %s", w.Body.String()))
 }
 
 func TestRemove(t *testing.T) {
@@ -182,6 +182,6 @@ func TestRemove(t *testing.T) {
 	w = httptest.NewRecorder()
 	c.Remove(ctx, w, r)
 	assert.Equal(http.StatusUnauthorized, w.Code, "Invalid statuscode")
-	const unauth_error = `{"errors":[{"status":"401"`
-	assert.True(strings.HasPrefix(strings.TrimSpace(w.Body.String()), unauth_error), "Invalid output")
+	const unauthErr = `{"errors":[{"status":"401"`
+	assert.True(strings.HasPrefix(strings.TrimSpace(w.Body.String()), unauthErr), "Invalid output")
 }
