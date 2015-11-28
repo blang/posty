@@ -1,5 +1,8 @@
 FROM golang:1.5
+MAINTAINER Benedikt Lang <mail@blang.io>
 
-ADD ./script/run.sh /run.sh
-VOLUME ["/data", "/build"]
-CMD ["/run.sh"]
+RUN go get -v github.com/skelterjohn/wgo
+ENV HOME /home
+COPY ./fakegitconfig /home/.gitconfig
+WORKDIR /data
+VOLUME ["/data"]

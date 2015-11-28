@@ -94,8 +94,11 @@ Requirements:
 
 #### Build backend
 ```
-# Build container for builds
+# Pull docker container
+docker pull blang/posty-build-backend
+# OR build container locally
 ./build/backend/buildcontainer.sh
+
 # Build ./posty using container
 ./build/backend/build.sh
 ```
@@ -103,8 +106,11 @@ Output: `./posty` binary
 
 #### Build frontend
 ```
-# Build container for builds
+# Pull docker container
+docker pull blang/posty-build-backend
+# OR build container locally
 ./build/backend/buildcontainer.sh
+
 # Build ./posty using container
 ./build/backend/build.sh
 ```
