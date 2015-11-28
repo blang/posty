@@ -21,6 +21,7 @@ angular.module('postyApp')
     $scope.loadPosts = function() {
         $http.get('/api/posts').success(function(data) {
             $scope.posts = data['data']
+            $scope.showListMsg('Posts loaded!');
         }).error(function(data,status,headers,config) {
             console.log("Status", status);
             $scope.showListErrorMsg("Could not fetch posts :( but i'm not giving up");
